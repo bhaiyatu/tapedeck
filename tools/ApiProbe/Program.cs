@@ -151,10 +151,21 @@ async Task LyricsFor(string videoId)
     }
 }
 
+void Hosts()
+{
+    Console.WriteLine("== SIGN-IN HOST ALLOWLIST");
+    foreach (var h in new[] { "accounts.google.com", "accounts.google.co.uk", "accounts.google.de", "accounts.google.com.au", "ACCOUNTS.GOOGLE.FR" })
+        Check(Tapedeck.Services.GoogleDomains.IsAccountsHost(h), $"Google sign-in host trusted: {h}");
+    foreach (var h in new[] { "accounts.google.co.uk.evil.com", "accounts.google.evil", "accounts.googIe.com", "accounts.google.com.evil.co",
+                              "evil.accounts.google.com.example", "accounts-google.com", "accounts.google", "xaccounts.google.com", "mail.google.com" })
+        Check(!Tapedeck.Services.GoogleDomains.IsAccountsHost(h), $"look-alike rejected: {h}");
+}
+
 try
 {
     switch (cmd)
     {
+        case "hosts": Hosts(); break;
         case "home": await Home(); break;
         case "explore": await Explore(); break;
         case "search": await Search(arg ?? "daft punk"); break;
@@ -163,6 +174,7 @@ try
         case "queue": await Queue(arg!); break;
         case "lyrics": await LyricsFor(arg!); break;
         default:
+            Hosts();
             await Home();
             await Explore();
             var r = await Search("daft punk");

@@ -10,5 +10,6 @@
   <ItemGroup>
     <Compile Include="..\..\src\Tapedeck\Models\*.cs" Link="Shared\Models\%(Filename)%(Extension)" />
     <Compile Include="..\..\src\Tapedeck\Services\Api\*.cs" Link="Shared\Api\%(Filename)%(Extension)" />
+    <Compile Include="..\..\src\Tapedeck\Services\GoogleDomains.cs" Link="Shared\GoogleDomains.cs" />
   </ItemGroup>
 </Project>

@@ -70,16 +70,23 @@ public static class WebViewHost
     {
         if (uri.Scheme != Uri.UriSchemeHttps) return false;
         var host = uri.Host.ToLowerInvariant();
-        return host is "accounts.google.com" or "accounts.youtube.com" or "myaccount.google.com"
+        return host is "accounts.youtube.com" or "myaccount.google.com"
                    or "consent.google.com" or "consent.youtube.com" or "www.google.com" or "support.google.com"
-                   or "music.youtube.com" or "www.youtube.com" or "m.youtube.com" or "youtube.com";
+                   or "music.youtube.com" or "www.youtube.com" or "m.youtube.com" or "youtube.com"
+               // accounts.google.com and Google's own country sign-in domains (accounts.google.co.uk, …)
+               || GoogleDomains.IsAccountsHost(host);
     }
 
     /// <summary>The narrower set the hidden player is allowed to be on.</summary>
-    public static bool IsPlayerHost(Uri uri) =>
-        uri.Scheme == Uri.UriSchemeHttps &&
-        uri.Host.ToLowerInvariant() is "music.youtube.com" or "www.youtube.com" or "youtube.com"
-            or "consent.youtube.com" or "consent.google.com" or "accounts.google.com" or "accounts.youtube.com";
+    public static bool IsPlayerHost(Uri uri)
+    {
+        if (uri.Scheme != Uri.UriSchemeHttps) return false;
+        var host = uri.Host.ToLowerInvariant();
+        return host is "music.youtube.com" or "www.youtube.com" or "youtube.com"
+                   or "consent.youtube.com" or "consent.google.com" or "accounts.youtube.com"
+               // Sign-out passes through Google's country domains too.
+               || GoogleDomains.IsAccountsHost(host);
+    }
 
     /// <summary>Security policy shared by the player and the sign-in window.</summary>
     public static void Harden(CoreWebView2 core, bool allowWebMessages)
