@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  SignPath artifact configuration "installers" (paste into SignPath: Project → Artifact configurations).
+  Input: a zip of the two Inno Setup installers, built from the already-signed binaries.
+-->
+<artifact-configuration xmlns="http://signpath.io/artifact-configuration/v1">
+  <parameters>
+    <parameter name="version" default-value="0.0.0" />
+  </parameters>
+  <zip-file>
+    <pe-file path="Tapedeck-${version}-x64-setup.exe" product-name="Tapedeck" product-version="${version}">
+      <authenticode-sign />
+    </pe-file>
+    <pe-file path="Tapedeck-${version}-arm64-setup.exe" product-name="Tapedeck" product-version="${version}">
+      <authenticode-sign />
+    </pe-file>
+  </zip-file>
+</artifact-configuration>

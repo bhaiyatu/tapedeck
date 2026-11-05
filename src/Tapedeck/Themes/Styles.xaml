@@ -207,29 +207,25 @@
         <Setter Property="FontSize" Value="17" />
     </Style>
 
-    <!-- Secondary action: filled, borderless. -->
+    <!-- Action buttons all share Shuffle's shape: 36px tall with fully rounded 18px ends. (Radii
+         larger than half the height, such as 999, make WinUI draw stretched elliptical ends.) -->
     <Style x:Key="PillButtonStyle" TargetType="Button" BasedOn="{StaticResource SoftButtonStyle}">
         <Setter Property="CornerRadius" Value="18" />
-        <Setter Property="Padding" Value="16,8" />
-        <Setter Property="MinHeight" Value="36" />
+        <Setter Property="Padding" Value="16,0" />
+        <Setter Property="Height" Value="36" />
         <Setter Property="Background" Value="{ThemeResource SurfaceBackground}" />
         <Setter Property="BorderThickness" Value="0" />
     </Style>
 
-    <!-- Primary action: inverse pill (white on near-black, black on light), easyui style. -->
-    <Style x:Key="PillAccentButtonStyle" TargetType="Button" BasedOn="{StaticResource SoftButtonStyle}">
-        <Setter Property="CornerRadius" Value="999" />
-        <Setter Property="Padding" Value="18,8" />
-        <Setter Property="MinHeight" Value="36" />
+    <!-- Primary action: inverse (white on near-black, black on light), easyui style. -->
+    <Style x:Key="PillAccentButtonStyle" TargetType="Button" BasedOn="{StaticResource PillButtonStyle}">
         <Setter Property="Background" Value="{ThemeResource InverseBackground}" />
         <Setter Property="Foreground" Value="{ThemeResource InverseText}" />
         <Setter Property="FontWeight" Value="SemiBold" />
     </Style>
 
-    <Style x:Key="PillBrandButtonStyle" TargetType="Button" BasedOn="{StaticResource SoftButtonStyle}">
-        <Setter Property="CornerRadius" Value="999" />
-        <Setter Property="Padding" Value="20,8" />
-        <Setter Property="MinHeight" Value="38" />
+    <!-- Main call to action (Play): same shape as Shuffle, brand gradient fill. -->
+    <Style x:Key="PillBrandButtonStyle" TargetType="Button" BasedOn="{StaticResource PillButtonStyle}">
         <Setter Property="Background" Value="{StaticResource BrandGradient}" />
         <Setter Property="Foreground" Value="White" />
         <Setter Property="FontWeight" Value="SemiBold" />

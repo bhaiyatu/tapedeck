@@ -11,6 +11,10 @@
 #ifndef Arch
   #define Arch "x64"
 #endif
+; Numeric x.y.z for the file's version resource (AppVersion may carry a "-ci.N" suffix).
+#ifndef NumericVersion
+  #define NumericVersion "0.0.0"
+#endif
 
 [Setup]
 AppId={{6F0E3C7A-5B8D-4E61-9C3F-2A7D1B4E8C55}
@@ -44,6 +48,17 @@ ArchitecturesInstallIn64BitMode=x64compatible
 #endif
 CloseApplications=yes
 RestartApplications=no
+LicenseFile=..\LICENSE
+; Shown before installing: what Tapedeck connects to and stores (SignPath Foundation requires this).
+InfoBeforeFile=privacy-notice.txt
+; Product name / version metadata on setup.exe (checked by SignPath before signing).
+VersionInfoProductName=Tapedeck
+VersionInfoProductVersion={#AppVersion}
+VersionInfoProductTextVersion={#AppVersion}
+VersionInfoVersion={#NumericVersion}
+VersionInfoDescription=Tapedeck installer
+VersionInfoCompany=Tapedeck contributors
+VersionInfoCopyright=Copyright (c) 2026 bhaiyatu (MIT License)
 
 [Tasks]
 Name: "desktopicon"; Description: "Create a &desktop shortcut"; GroupDescription: "Shortcuts:"; Flags: unchecked

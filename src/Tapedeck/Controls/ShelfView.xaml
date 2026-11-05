@@ -42,7 +42,7 @@
                 <TextBlock x:Name="TitleText" Style="{StaticResource ShelfTitleStyle}" />
             </StackPanel>
             <Button x:Name="MoreButton" Grid.Column="1" Content="See all" Style="{StaticResource PillButtonStyle}"
-                    Padding="12,4" MinHeight="30" Visibility="Collapsed" Click="OnMoreClick" />
+                    Padding="14,0" Height="30" CornerRadius="15" Visibility="Collapsed" Click="OnMoreClick" />
             <Button x:Name="LeftButton" Grid.Column="2" Style="{StaticResource IconButtonStyle}" Content="&#xE76B;"
                     ToolTipService.ToolTip="Scroll left" Visibility="Collapsed" Click="OnScrollLeft" />
             <Button x:Name="RightButton" Grid.Column="3" Style="{StaticResource IconButtonStyle}" Content="&#xE76C;"

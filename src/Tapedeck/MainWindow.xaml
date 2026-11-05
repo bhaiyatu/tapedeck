@@ -69,7 +69,7 @@
             </ScrollViewer>
 
             <!-- Account, pinned to the bottom like Kaset; same height and shape as the player. -->
-            <Button x:Name="AccountButton" Grid.Row="1" Style="{StaticResource SoftButtonStyle}" Height="76"
+            <Button x:Name="AccountButton" Grid.Row="1" Style="{StaticResource SoftButtonStyle}" Height="80"
                     HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Padding="12,0"
                     Background="{ThemeResource CanvasBackground}" BorderBrush="{ThemeResource CanvasStroke}" BorderThickness="1"
                     CornerRadius="18" AutomationProperties.Name="Account">

@@ -91,6 +91,11 @@ public static class DevCommands
             case "signin": _ = App.MainWindow.SignInAsync(); break;
             case "toast": App.MainWindow.ShowToast(arg); break;
             case "privatecheck": await PrivateProfileCheckAsync(); break;
+            case "size":
+                var wh = arg.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                if (wh.Length == 2 && int.TryParse(wh[0], out var w) && int.TryParse(wh[1], out var h))
+                    App.MainWindow.AppWindow.Resize(new Windows.Graphics.SizeInt32(w, h));
+                break;
         }
     }
 

@@ -2,6 +2,14 @@
 #   - Tapedeck-<version>-x64-setup.exe / -arm64-setup.exe   (per-user installer, no admin prompt)
 #   - Tapedeck-<version>-x64-portable.zip / -arm64-portable.zip
 #   - SHA256SUMS.txt and a signed build-provenance attestation for every file
+#
+# Code signing (SignPath Foundation) switches on for version tags once these are set in
+# GitHub → Settings → Secrets and variables → Actions:
+#   secret   SIGNPATH_API_TOKEN            (SignPath CI user with submitter rights)
+#   variable SIGNPATH_ORGANIZATION_ID
+#   variable SIGNPATH_PROJECT_SLUG         (default: tapedeck)
+#   variable SIGNPATH_SIGNING_POLICY_SLUG  (default: release-signing)
+# SignPath artifact configurations "binaries" and "installers" are in .signpath/.
 name: Build
 
 on:
@@ -18,18 +26,17 @@ concurrency:
   group: build-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  SIGN: ${{ startsWith(github.ref, 'refs/tags/v') && vars.SIGNPATH_ORGANIZATION_ID != '' }}
+
 jobs:
-  build:
-    name: Build (${{ matrix.arch }})
+  package:
+    name: Build, sign and package
     runs-on: windows-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - arch: x64
-            platform: x64
-          - arch: arm64
-            platform: ARM64
+    timeout-minutes: 180
+    permissions:
+      contents: read
+      actions: read   # the SignPath action reads job and artifact details
     steps:
       - uses: actions/checkout@v4
         with:
@@ -43,57 +50,144 @@ jobs:
         id: ver
         shell: pwsh
         run: |
+          $base = ([xml](Get-Content src/Tapedeck/Tapedeck.csproj)).Project.PropertyGroup.Version | Where-Object { $_ } | Select-Object -First 1
           if ("${{ github.ref }}" -like "refs/tags/v*") {
             $v = "${{ github.ref_name }}".TrimStart("v")
           } else {
-            $base = ([xml](Get-Content src/Tapedeck/Tapedeck.csproj)).Project.PropertyGroup.Version | Where-Object { $_ } | Select-Object -First 1
             $v = "$base-ci.${{ github.run_number }}"
           }
+          $numeric = ($v -split '-')[0]
           "version=$v" >> $env:GITHUB_OUTPUT
-          Write-Output "Version: $v"
+          "numeric=$numeric" >> $env:GITHUB_OUTPUT
+          Write-Output "Version: $v (numeric $numeric), signing: $env:SIGN"
 
-      - name: Publish (self-contained, locked dependencies)
-        shell: pwsh
-        run: >
-          dotnet publish src/Tapedeck/Tapedeck.csproj -c Release
-          -r win-${{ matrix.arch }} -p:Platform=${{ matrix.platform }} --self-contained true
-          -p:RestoreLockedMode=true -p:Version=${{ steps.ver.outputs.version }}
-          -o publish/win-${{ matrix.arch }}
-
-      - name: Check release build has no debug hooks
+      - name: Publish x64 and ARM64 (self-contained, locked dependencies)
         shell: pwsh
         run: |
-          $bytes = [IO.File]::ReadAllBytes("publish/win-${{ matrix.arch }}/Tapedeck.dll")
-          $text = [Text.Encoding]::Unicode.GetString($bytes) + [Text.Encoding]::UTF8.GetString($bytes)
-          foreach ($needle in "eval.js", "command.txt", "TAPEDECK_DEBUG", "OpenDevToolsWindow") {
-            if ($text.Contains($needle)) { throw "Release build contains debug hook: $needle" }
+          foreach ($t in @(@{ arch = "x64"; platform = "x64" }, @{ arch = "arm64"; platform = "ARM64" })) {
+            dotnet publish src/Tapedeck/Tapedeck.csproj -c Release `
+              -r "win-$($t.arch)" "-p:Platform=$($t.platform)" --self-contained true `
+              -p:RestoreLockedMode=true "-p:Version=${{ steps.ver.outputs.version }}" `
+              -o "publish/win-$($t.arch)"
+            if ($LASTEXITCODE -ne 0) { throw "Publish failed for $($t.arch)" }
           }
-          Write-Output "OK: no debug hooks in the release build."
 
-      - name: Portable zip
+      - name: Check release builds have no debug hooks
+        shell: pwsh
+        run: |
+          foreach ($arch in "x64", "arm64") {
+            $bytes = [IO.File]::ReadAllBytes("publish/win-$arch/Tapedeck.dll")
+            $text = [Text.Encoding]::Unicode.GetString($bytes) + [Text.Encoding]::UTF8.GetString($bytes)
+            foreach ($needle in "eval.js", "command.txt", "TAPEDECK_DEBUG", "OpenDevToolsWindow") {
+              if ($text.Contains($needle)) { throw "Release build ($arch) contains debug hook: $needle" }
+            }
+          }
+          Write-Output "OK: no debug hooks in the release builds."
+
+      # ── Sign Tapedeck.exe / Tapedeck.dll (both architectures, one approval) ──
+      - name: Upload binaries for signing
+        if: env.SIGN == 'true'
+        id: upload-binaries
+        uses: actions/upload-artifact@v4
+        with:
+          name: unsigned-binaries
+          path: publish/
+          retention-days: 1
+
+      - name: Sign binaries (SignPath)
+        if: env.SIGN == 'true'
+        uses: signpath/github-action-submit-signing-request@v3
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG || 'tapedeck' }}
+          signing-policy-slug: ${{ vars.SIGNPATH_SIGNING_POLICY_SLUG || 'release-signing' }}
+          artifact-configuration-slug: binaries
+          github-artifact-id: ${{ steps.upload-binaries.outputs.artifact-id }}
+          wait-for-completion: true
+          wait-for-completion-timeout-in-seconds: 7200   # leaves time to approve the request
+          output-artifact-directory: signed-publish
+          parameters: |
+            version: ${{ toJSON(steps.ver.outputs.version) }}
+
+      - name: Use the signed binaries
+        if: env.SIGN == 'true'
+        shell: pwsh
+        run: |
+          Remove-Item publish -Recurse -Force
+          Move-Item signed-publish publish
+          foreach ($f in Get-ChildItem publish/win-*/Tapedeck.exe, publish/win-*/Tapedeck.dll) {
+            $sig = Get-AuthenticodeSignature $f.FullName
+            if ($sig.Status -ne "Valid") { throw "$($f.FullName) is not validly signed: $($sig.Status)" }
+            Write-Output "Signed: $($f.FullName) by $($sig.SignerCertificate.Subject)"
+          }
+
+      - name: Portable zips
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force dist | Out-Null
-          Compress-Archive -Path "publish/win-${{ matrix.arch }}/*" -DestinationPath "dist/Tapedeck-${{ steps.ver.outputs.version }}-${{ matrix.arch }}-portable.zip"
+          foreach ($arch in "x64", "arm64") {
+            Compress-Archive -Path "publish/win-$arch/*" -DestinationPath "dist/Tapedeck-${{ steps.ver.outputs.version }}-$arch-portable.zip"
+          }
 
-      - name: Installer
+      - name: Installers
         shell: pwsh
         run: |
           choco install innosetup --no-progress -y | Out-Null
           $iscc = Join-Path ${env:ProgramFiles(x86)} "Inno Setup 6\ISCC.exe"
-          & $iscc "/DAppVersion=${{ steps.ver.outputs.version }}" "/DSourceDir=..\publish\win-${{ matrix.arch }}" "/DArch=${{ matrix.arch }}" installer\Tapedeck.iss
-          if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed" }
+          foreach ($arch in "x64", "arm64") {
+            & $iscc "/DAppVersion=${{ steps.ver.outputs.version }}" "/DNumericVersion=${{ steps.ver.outputs.numeric }}" `
+              "/DSourceDir=..\publish\win-$arch" "/DArch=$arch" installer\Tapedeck.iss
+            if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed for $arch" }
+          }
+
+      # ── Sign the installers (one approval) ──
+      - name: Upload installers for signing
+        if: env.SIGN == 'true'
+        id: upload-installers
+        uses: actions/upload-artifact@v4
+        with:
+          name: unsigned-installers
+          path: dist/*-setup.exe
+          retention-days: 1
+
+      - name: Sign installers (SignPath)
+        if: env.SIGN == 'true'
+        uses: signpath/github-action-submit-signing-request@v3
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG || 'tapedeck' }}
+          signing-policy-slug: ${{ vars.SIGNPATH_SIGNING_POLICY_SLUG || 'release-signing' }}
+          artifact-configuration-slug: installers
+          github-artifact-id: ${{ steps.upload-installers.outputs.artifact-id }}
+          wait-for-completion: true
+          wait-for-completion-timeout-in-seconds: 7200
+          output-artifact-directory: signed-installers
+          parameters: |
+            version: ${{ toJSON(steps.ver.outputs.version) }}
+
+      - name: Use the signed installers
+        if: env.SIGN == 'true'
+        shell: pwsh
+        run: |
+          Copy-Item signed-installers/*-setup.exe dist -Force
+          foreach ($f in Get-ChildItem dist/*-setup.exe) {
+            $sig = Get-AuthenticodeSignature $f.FullName
+            if ($sig.Status -ne "Valid") { throw "$($f.Name) is not validly signed: $($sig.Status)" }
+            Write-Output "Signed: $($f.Name)"
+          }
 
       - uses: actions/upload-artifact@v4
         with:
-          name: tapedeck-${{ matrix.arch }}
+          name: tapedeck
           path: dist/*
           if-no-files-found: error
 
   release:
     name: Publish release
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: build
+    needs: package
     runs-on: ubuntu-latest
     permissions:
       contents: write       # create the release
@@ -102,8 +196,8 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
+          name: tapedeck      # only the final files, never the unsigned intermediates
           path: dist
-          merge-multiple: true
 
       - name: Checksums
         run: |
@@ -127,9 +221,10 @@ jobs:
 
             Requires Windows 10 (2004) or later with the WebView2 runtime (built into Windows 11).
 
-            **"Windows protected your PC"?** Tapedeck isn't code-signed yet, so SmartScreen warns about new downloads. Choose **More info → Run anyway**, and only for files downloaded from this page.
-
             ## Verify your download
             Every file here was built by GitHub Actions straight from this repository's source:
             - Compare the file's SHA-256 with `SHA256SUMS.txt`: in PowerShell, run `Get-FileHash .\Tapedeck-…-setup.exe`.
             - Or verify the signed provenance: `gh attestation verify <file> --repo ${{ github.repository }}`
+
+            ## Code signing policy
+            Free code signing provided by [SignPath.io](https://signpath.io), certificate by [SignPath Foundation](https://signpath.org). If a release predates signing, Windows SmartScreen may warn on first run: choose **More info → Run anyway**, and only for files from this page. See the [code signing policy](https://github.com/${{ github.repository }}#code-signing-policy) and [privacy policy](https://github.com/${{ github.repository }}/blob/main/PRIVACY.md).

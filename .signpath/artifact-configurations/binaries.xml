@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  SignPath artifact configuration "binaries" (paste into SignPath: Project → Artifact configurations).
+  Input: the zip GitHub Actions uploads of publish/, holding win-x64/ and win-arm64/.
+  Signs Tapedeck's own executable and assembly; the bundled .NET and Windows App SDK files are
+  Microsoft's and already signed. Product name and version must match the release.
+-->
+<artifact-configuration xmlns="http://signpath.io/artifact-configuration/v1">
+  <parameters>
+    <parameter name="version" default-value="0.0.0" />
+  </parameters>
+  <zip-file>
+    <directory path="win-x64">
+      <pe-file path="Tapedeck.exe" product-name="Tapedeck" product-version="${version}">
+        <authenticode-sign />
+      </pe-file>
+      <pe-file path="Tapedeck.dll" product-name="Tapedeck" product-version="${version}">
+        <authenticode-sign />
+      </pe-file>
+    </directory>
+    <directory path="win-arm64">
+      <pe-file path="Tapedeck.exe" product-name="Tapedeck" product-version="${version}">
+        <authenticode-sign />
+      </pe-file>
+      <pe-file path="Tapedeck.dll" product-name="Tapedeck" product-version="${version}">
+        <authenticode-sign />
+      </pe-file>
+    </directory>
+  </zip-file>
+</artifact-configuration>

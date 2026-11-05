@@ -1,0 +1,20 @@
+Tapedeck is an unofficial YouTube Music client. It is not affiliated with YouTube or Google.
+
+PRIVACY
+
+Tapedeck has no servers or analytics of its own. It sends nothing to its developers.
+
+To do what you ask, it connects to:
+
+  - YouTube Music and Google, to browse, search and play music, and to sign
+    in if you choose to. Google's privacy policy applies.
+
+  - LRCLIB (lrclib.net), only while the Lyrics panel is open, to find
+    time-synced lyrics. It receives the song's title, artist, album and
+    length, never account details. You can turn this off in Settings.
+
+Tapedeck never sees your Google password. You type it into Google's own page.
+Your sign-in session is kept on this PC, encrypted with your Windows account.
+You can choose not to stay signed in. Uninstalling offers to delete it.
+
+Full policy: https://github.com/bhaiyatu/tapedeck/blob/main/PRIVACY.md
