@@ -18,7 +18,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>preview</LangVersion>
     <ApplicationIcon>Assets\Tapedeck.ico</ApplicationIcon>
-    <Version>0.1.0</Version>
+    <Version>0.1.1</Version>
     <Product>Tapedeck</Product>
     <Description>A native Windows client for YouTube Music</Description>
     <!-- Pin every package (and transitive dependency) by content hash; CI restores with locked mode. -->
