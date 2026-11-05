@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UserControl
+    x:Class="Tapedeck.Controls.TrackRow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:h="using:Tapedeck.Helpers"
+    Loaded="OnLoaded"
+    Unloaded="OnUnloaded"
+    PointerEntered="OnPointerEntered"
+    PointerExited="OnPointerExited"
+    Tapped="OnTapped"
+    RightTapped="OnRightTapped">
+
+    <Grid x:Name="Root" Height="56" Padding="8,4" CornerRadius="6" ColumnSpacing="12" Background="Transparent">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
+
+        <TextBlock x:Name="NumberText" Width="24" TextAlignment="Right" VerticalAlignment="Center"
+                   Style="{StaticResource SecondaryTextStyle}"
+                   Text="{x:Bind Number, Mode=OneWay}"
+                   Visibility="{x:Bind h:Fmt.ShowIf(Number), Mode=OneWay}" />
+
+        <Grid Grid.Column="1" Width="44" Height="44"
+              CornerRadius="{x:Bind h:Fmt.ArtRadius(Item.IsRound), Mode=OneWay}"
+              Background="{ThemeResource ArtPlaceholder}"
+              Visibility="{x:Bind ArtVisibility, Mode=OneWay}">
+            <Image Source="{x:Bind h:Fmt.ImgSized(Item.ThumbnailUrl, 44), Mode=OneWay}" Stretch="UniformToFill" />
+            <Grid x:Name="PlayingOverlay" Background="#80000000" Visibility="Collapsed">
+                <FontIcon Glyph="&#xE995;" FontSize="16" Foreground="White" />
+            </Grid>
+        </Grid>
+
+        <StackPanel Grid.Column="2" VerticalAlignment="Center" Spacing="1">
+            <TextBlock x:Name="TitleText" Text="{x:Bind Item.Title, Mode=OneWay}"
+                       Style="{StaticResource BodyStrongTextBlockStyle}" TextTrimming="CharacterEllipsis" MaxLines="1" />
+            <StackPanel Orientation="Horizontal" Spacing="6">
+                <Border Background="{ThemeResource ControlStrongFillColorDefaultBrush}" CornerRadius="2" Padding="4,0"
+                        VerticalAlignment="Center"
+                        Visibility="{x:Bind h:Fmt.Show(Item.IsExplicit), Mode=OneWay}">
+                    <TextBlock Text="E" FontSize="10" FontWeight="SemiBold" Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}" />
+                </Border>
+                <TextBlock Text="{x:Bind Item.Subtitle, Mode=OneWay}" Style="{StaticResource SecondaryTextStyle}" MaxLines="1" />
+            </StackPanel>
+        </StackPanel>
+
+        <TextBlock Grid.Column="3" Width="180" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                   Style="{StaticResource SecondaryTextStyle}"
+                   Text="{x:Bind Item.Album.Name, Mode=OneWay, FallbackValue=''}"
+                   Visibility="{x:Bind AlbumVisibility, Mode=OneWay}" />
+
+        <TextBlock Grid.Column="4" VerticalAlignment="Center" Style="{StaticResource SecondaryTextStyle}"
+                   Text="{x:Bind Item.DurationText, Mode=OneWay}" />
+
+        <Button x:Name="MoreButton" Grid.Column="5" Style="{StaticResource IconButtonStyle}" Width="32" Height="32"
+                Content="&#xE712;" Opacity="0" ToolTipService.ToolTip="More options" Click="OnMoreClick" />
+    </Grid>
+</UserControl>

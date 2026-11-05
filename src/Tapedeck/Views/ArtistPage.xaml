@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="Tapedeck.Views.ArtistPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:c="using:Tapedeck.Controls"
+    xmlns:m="using:Tapedeck.Models"
+    Background="Transparent">
+
+    <Grid>
+        <ScrollViewer x:Name="Scroller">
+            <StackPanel>
+                <!-- Banner: artist photo fading into the page. -->
+                <Grid x:Name="Banner" Height="340" Visibility="Collapsed">
+                    <Image x:Name="BannerImage" Stretch="UniformToFill" VerticalAlignment="Top" />
+                    <Rectangle>
+                        <Rectangle.Fill>
+                            <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                <GradientStop Color="#00000000" Offset="0.25" />
+                                <GradientStop Color="#CC000000" Offset="1" />
+                            </LinearGradientBrush>
+                        </Rectangle.Fill>
+                    </Rectangle>
+                    <StackPanel VerticalAlignment="Bottom" Padding="36,0,36,24" Spacing="6" RequestedTheme="Dark">
+                        <TextBlock x:Name="NameText" Style="{StaticResource DisplayTextBlockStyle}" TextTrimming="CharacterEllipsis" />
+                        <TextBlock x:Name="AudienceText" Style="{StaticResource BodyTextBlockStyle}" Opacity="0.85" />
+                        <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,10,0,0">
+                            <Button x:Name="ShuffleButton" Style="{StaticResource PillAccentButtonStyle}" Click="OnShuffle">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <FontIcon Glyph="&#xE8B1;" FontSize="14" />
+                                    <TextBlock Text="Shuffle" />
+                                </StackPanel>
+                            </Button>
+                            <Button x:Name="RadioButton" Style="{StaticResource PillButtonStyle}" Click="OnRadio">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <FontIcon Glyph="&#xEC05;" FontSize="14" />
+                                    <TextBlock Text="Mix" />
+                                </StackPanel>
+                            </Button>
+                            <Button Style="{StaticResource IconButtonStyle}" Content="&#xE71B;" ToolTipService.ToolTip="Copy link" Click="OnCopyLink" />
+                        </StackPanel>
+                    </StackPanel>
+                </Grid>
+
+                <StackPanel Padding="36,24,36,36">
+                    <TextBlock x:Name="DescriptionText" Style="{StaticResource BodyTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                               TextWrapping="Wrap" MaxLines="3" TextTrimming="WordEllipsis" MaxWidth="900" HorizontalAlignment="Left"
+                               Margin="0,0,0,28" Visibility="Collapsed" Tapped="OnDescriptionTapped" />
+                    <ItemsRepeater x:Name="ShelvesRepeater">
+                        <ItemsRepeater.ItemTemplate>
+                            <DataTemplate x:DataType="m:Shelf">
+                                <c:ShelfView Shelf="{x:Bind}" />
+                            </DataTemplate>
+                        </ItemsRepeater.ItemTemplate>
+                    </ItemsRepeater>
+                </StackPanel>
+            </StackPanel>
+        </ScrollViewer>
+
+        <ProgressRing x:Name="LoadingRing" IsActive="False" Width="48" Height="48" />
+
+        <StackPanel x:Name="ErrorPanel" Visibility="Collapsed" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="12" MaxWidth="460">
+            <FontIcon Glyph="&#xE783;" FontSize="36" />
+            <TextBlock x:Name="ErrorText" TextWrapping="Wrap" TextAlignment="Center" />
+            <Button Content="Try again" HorizontalAlignment="Center" Style="{StaticResource PillAccentButtonStyle}" Click="OnRetry" />
+        </StackPanel>
+    </Grid>
+</Page>

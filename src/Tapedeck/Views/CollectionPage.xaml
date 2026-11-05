@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="Tapedeck.Views.CollectionPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:c="using:Tapedeck.Controls"
+    xmlns:m="using:Tapedeck.Models"
+    Background="Transparent">
+
+    <Page.Resources>
+        <DataTemplate x:Key="AlbumTrackTemplate" x:DataType="m:MusicItem">
+            <c:TrackRow Item="{x:Bind}" Number="{x:Bind Index}" ShowArt="False" HandlesTap="False" />
+        </DataTemplate>
+        <DataTemplate x:Key="PlaylistTrackTemplate" x:DataType="m:MusicItem">
+            <c:TrackRow Item="{x:Bind}" ShowAlbum="True" HandlesTap="False" />
+        </DataTemplate>
+        <SolidColorBrush x:Key="ListViewItemBackgroundPointerOver" Color="Transparent" />
+        <SolidColorBrush x:Key="ListViewItemBackgroundPressed" Color="Transparent" />
+    </Page.Resources>
+
+    <Grid>
+        <ListView x:Name="TrackList" SelectionMode="None" IsItemClickEnabled="True" ItemClick="OnTrackClick"
+                  Padding="24,0,24,24">
+            <ListView.ItemContainerStyle>
+                <Style TargetType="ListViewItem" BasedOn="{StaticResource DefaultListViewItemStyle}">
+                    <Setter Property="Padding" Value="0" />
+                    <Setter Property="MinHeight" Value="0" />
+                    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                </Style>
+            </ListView.ItemContainerStyle>
+
+            <ListView.Header>
+                <Grid x:Name="HeaderGrid" Padding="12,24,12,24" ColumnSpacing="28" Visibility="Collapsed">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Grid Width="232" Height="232" CornerRadius="10" Background="{ThemeResource ArtPlaceholder}" VerticalAlignment="Top">
+                        <Image x:Name="ArtImage" Stretch="UniformToFill" />
+                    </Grid>
+                    <StackPanel Grid.Column="1" VerticalAlignment="Bottom" Spacing="4">
+                        <TextBlock x:Name="KindText" Style="{StaticResource SecondaryTextStyle}" CharacterSpacing="40" />
+                        <TextBlock x:Name="TitleText" Style="{StaticResource TitleLargeTextBlockStyle}" TextWrapping="Wrap"
+                                   MaxLines="2" TextTrimming="CharacterEllipsis" IsTextSelectionEnabled="True" />
+                        <StackPanel x:Name="ArtistsPanel" Orientation="Horizontal" Margin="-11,0,0,0" />
+                        <TextBlock x:Name="SubtitleText" Style="{StaticResource SecondaryTextStyle}" />
+                        <TextBlock x:Name="DescriptionText" Style="{StaticResource BodyTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                   TextWrapping="Wrap" MaxLines="3" TextTrimming="WordEllipsis" MaxWidth="720" HorizontalAlignment="Left"
+                                   Margin="0,6,0,0" Tapped="OnDescriptionTapped" />
+                        <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,14,0,0">
+                            <Button Style="{StaticResource PillAccentButtonStyle}" Click="OnPlayAll">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <FontIcon Glyph="&#xE768;" FontSize="14" />
+                                    <TextBlock Text="Play" />
+                                </StackPanel>
+                            </Button>
+                            <Button Style="{StaticResource PillButtonStyle}" Click="OnShuffle">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <FontIcon Glyph="&#xE8B1;" FontSize="14" />
+                                    <TextBlock Text="Shuffle" />
+                                </StackPanel>
+                            </Button>
+                            <Button Style="{StaticResource IconButtonStyle}" Content="&#xE712;" ToolTipService.ToolTip="More options">
+                                <Button.Flyout>
+                                    <MenuFlyout>
+                                        <MenuFlyoutItem Text="Play next" Click="OnPlayNext">
+                                            <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8A5;" /></MenuFlyoutItem.Icon>
+                                        </MenuFlyoutItem>
+                                        <MenuFlyoutItem Text="Add to queue" Click="OnAddToQueue">
+                                            <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE710;" /></MenuFlyoutItem.Icon>
+                                        </MenuFlyoutItem>
+                                        <MenuFlyoutSeparator />
+                                        <MenuFlyoutItem Text="Copy link" Click="OnCopyLink">
+                                            <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE71B;" /></MenuFlyoutItem.Icon>
+                                        </MenuFlyoutItem>
+                                        <MenuFlyoutItem Text="Open in browser" Click="OnOpenInBrowser">
+                                            <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE774;" /></MenuFlyoutItem.Icon>
+                                        </MenuFlyoutItem>
+                                    </MenuFlyout>
+                                </Button.Flyout>
+                            </Button>
+                        </StackPanel>
+                    </StackPanel>
+                </Grid>
+            </ListView.Header>
+
+            <ListView.Footer>
+                <StackPanel Padding="12,8,12,0">
+                    <ProgressRing x:Name="MoreRing" IsActive="False" Width="28" Height="28" Margin="0,8" />
+                    <TextBlock x:Name="FooterText" Style="{StaticResource SecondaryTextStyle}" Margin="8,12,0,28" />
+                    <ItemsRepeater x:Name="RelatedRepeater">
+                        <ItemsRepeater.ItemTemplate>
+                            <DataTemplate x:DataType="m:Shelf">
+                                <c:ShelfView Shelf="{x:Bind}" />
+                            </DataTemplate>
+                        </ItemsRepeater.ItemTemplate>
+                    </ItemsRepeater>
+                </StackPanel>
+            </ListView.Footer>
+        </ListView>
+
+        <ProgressRing x:Name="LoadingRing" IsActive="False" Width="48" Height="48" />
+
+        <StackPanel x:Name="ErrorPanel" Visibility="Collapsed" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="12" MaxWidth="460">
+            <FontIcon Glyph="&#xE783;" FontSize="36" />
+            <TextBlock x:Name="ErrorText" TextWrapping="Wrap" TextAlignment="Center" />
+            <Button Content="Try again" HorizontalAlignment="Center" Style="{StaticResource PillAccentButtonStyle}" Click="OnRetry" />
+        </StackPanel>
+    </Grid>
+</Page>

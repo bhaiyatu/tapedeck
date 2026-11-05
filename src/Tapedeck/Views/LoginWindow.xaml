@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Window
+    x:Class="Tapedeck.Views.LoginWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="Sign in to YouTube Music">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <InfoBar x:Name="Banner" IsOpen="True" IsClosable="False" Severity="Informational"
+                 Title="Sign in with your Google account"
+                 Message="Tapedeck keeps the session on this PC only, in the same way a browser would." />
+        <WebView2 x:Name="Browser" Grid.Row="1" />
+        <ProgressRing x:Name="LoadingRing" Grid.Row="1" IsActive="True" Width="40" Height="40" />
+    </Grid>
+</Window>

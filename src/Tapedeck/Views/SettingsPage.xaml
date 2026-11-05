@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="Tapedeck.Views.SettingsPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:h="using:Tapedeck.Helpers"
+    Background="Transparent">
+
+    <ScrollViewer>
+        <StackPanel Padding="36,20,36,36" Spacing="6" MaxWidth="860" HorizontalAlignment="Left">
+            <TextBlock Text="Settings" Style="{StaticResource PageTitleStyle}" />
+
+            <TextBlock Text="Account" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,8,0,4" />
+            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1" CornerRadius="8" Padding="16">
+                <Grid ColumnSpacing="16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <PersonPicture Width="48" Height="48"
+                                   ProfilePicture="{x:Bind h:Fmt.Img(Auth.Account.PhotoUrl), Mode=OneWay}"
+                                   DisplayName="{x:Bind Auth.Account.Name, Mode=OneWay, FallbackValue=''}" />
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                        <TextBlock x:Name="AccountName" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                        <TextBlock x:Name="AccountDetail" Style="{StaticResource SecondaryTextStyle}" TextWrapping="Wrap" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                        <Button Content="Sign in" Style="{StaticResource AccentButtonStyle}" Click="OnSignIn"
+                                Visibility="{x:Bind Auth.IsSignedOut, Mode=OneWay}" />
+                        <Button Content="Sign out" Click="OnSignOut" Visibility="{x:Bind Auth.IsSignedIn, Mode=OneWay}" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <TextBlock Text="Appearance" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,20,0,4" />
+            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1" CornerRadius="8" Padding="16">
+                <Grid ColumnSpacing="16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="App theme" />
+                        <TextBlock Text="Choose light, dark, or follow Windows" Style="{StaticResource SecondaryTextStyle}" />
+                    </StackPanel>
+                    <ComboBox x:Name="ThemeBox" Grid.Column="1" MinWidth="160" SelectionChanged="OnThemeChanged">
+                        <ComboBoxItem Content="Use Windows setting" Tag="Default" />
+                        <ComboBoxItem Content="Light" Tag="Light" />
+                        <ComboBoxItem Content="Dark" Tag="Dark" />
+                    </ComboBox>
+                </Grid>
+            </Border>
+
+            <TextBlock Text="Keyboard shortcuts" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,20,0,4" />
+            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1" CornerRadius="8" Padding="16">
+                <Grid ColumnSpacing="24" RowSpacing="6">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition /><RowDefinition /><RowDefinition /><RowDefinition /><RowDefinition /><RowDefinition /><RowDefinition />
+                    </Grid.RowDefinitions>
+                    <TextBlock Text="Space" FontWeight="SemiBold" /><TextBlock Grid.Column="1" Text="Play / pause" />
+                    <TextBlock Grid.Row="1" Text="Ctrl + →  /  Ctrl + ←" FontWeight="SemiBold" /><TextBlock Grid.Row="1" Grid.Column="1" Text="Next / previous track" />
+                    <TextBlock Grid.Row="2" Text="Ctrl + ↑  /  Ctrl + ↓" FontWeight="SemiBold" /><TextBlock Grid.Row="2" Grid.Column="1" Text="Volume up / down" />
+                    <TextBlock Grid.Row="3" Text="Ctrl + F" FontWeight="SemiBold" /><TextBlock Grid.Row="3" Grid.Column="1" Text="Search" />
+                    <TextBlock Grid.Row="4" Text="Ctrl + L" FontWeight="SemiBold" /><TextBlock Grid.Row="4" Grid.Column="1" Text="Like current song" />
+                    <TextBlock Grid.Row="5" Text="Ctrl + S  /  Ctrl + R" FontWeight="SemiBold" /><TextBlock Grid.Row="5" Grid.Column="1" Text="Shuffle / repeat" />
+                    <TextBlock Grid.Row="6" Text="Media keys" FontWeight="SemiBold" /><TextBlock Grid.Row="6" Grid.Column="1" Text="Work system-wide, including from the lock screen" />
+                </Grid>
+            </Border>
+
+            <TextBlock Text="Troubleshooting" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,20,0,4" />
+            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1" CornerRadius="8" Padding="16">
+                <StackPanel Spacing="12">
+                    <TextBlock TextWrapping="Wrap" Style="{StaticResource SecondaryTextStyle}"
+                               Text="Audio plays through YouTube Music's own web player running hidden in the background. If playback gets stuck, reload it." />
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Button Content="Reload player" Click="OnReloadPlayer" />
+                        <Button Content="Show player" Click="OnShowPlayer" />
+                        <Button Content="Open data folder" Click="OnOpenData" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <TextBlock Text="About" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,20,0,4" />
+            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1" CornerRadius="8" Padding="16">
+                <StackPanel Spacing="6">
+                    <TextBlock x:Name="VersionText" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                    <TextBlock TextWrapping="Wrap" Style="{StaticResource SecondaryTextStyle}"
+                               Text="An unofficial Windows client for YouTube Music, inspired by Kaset for macOS. Not affiliated with YouTube or Google. Synced lyrics from LRCLIB." />
+                    <StackPanel Orientation="Horizontal" Margin="-12,0,0,0">
+                        <HyperlinkButton Content="Kaset (macOS)" NavigateUri="https://github.com/sozercan/kaset" />
+                        <HyperlinkButton Content="LRCLIB" NavigateUri="https://lrclib.net" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</Page>
