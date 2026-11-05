@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Page
     x:Class="Tapedeck.Views.ArtistPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -11,21 +11,21 @@
         <ScrollViewer x:Name="Scroller">
             <StackPanel>
                 <!-- Banner: artist photo fading into the page. -->
-                <Grid x:Name="Banner" Height="340" Visibility="Collapsed">
+                <Grid x:Name="Banner" Height="360" Margin="32,24,32,0" CornerRadius="20" Visibility="Collapsed" RequestedTheme="Dark">
                     <Image x:Name="BannerImage" Stretch="UniformToFill" VerticalAlignment="Top" />
                     <Rectangle>
                         <Rectangle.Fill>
                             <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                                <GradientStop Color="#00000000" Offset="0.25" />
-                                <GradientStop Color="#CC000000" Offset="1" />
+                                <GradientStop Color="#00000000" Offset="0.2" />
+                                <GradientStop Color="#E6000000" Offset="1" />
                             </LinearGradientBrush>
                         </Rectangle.Fill>
                     </Rectangle>
-                    <StackPanel VerticalAlignment="Bottom" Padding="36,0,36,24" Spacing="6" RequestedTheme="Dark">
-                        <TextBlock x:Name="NameText" Style="{StaticResource DisplayTextBlockStyle}" TextTrimming="CharacterEllipsis" />
+                    <StackPanel VerticalAlignment="Bottom" Padding="32,0,32,28" Spacing="6">
+                        <TextBlock x:Name="NameText" Style="{StaticResource PageTitleStyle}" FontSize="56" Margin="0" Foreground="White" />
                         <TextBlock x:Name="AudienceText" Style="{StaticResource BodyTextBlockStyle}" Opacity="0.85" />
                         <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,10,0,0">
-                            <Button x:Name="ShuffleButton" Style="{StaticResource PillAccentButtonStyle}" Click="OnShuffle">
+                            <Button x:Name="ShuffleButton" Style="{StaticResource PillBrandButtonStyle}" Click="OnShuffle">
                                 <StackPanel Orientation="Horizontal" Spacing="8">
                                     <FontIcon Glyph="&#xE8B1;" FontSize="14" />
                                     <TextBlock Text="Shuffle" />
@@ -42,7 +42,7 @@
                     </StackPanel>
                 </Grid>
 
-                <StackPanel Padding="36,24,36,36">
+                <StackPanel Padding="32,28,32,40">
                     <TextBlock x:Name="DescriptionText" Style="{StaticResource BodyTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                TextWrapping="Wrap" MaxLines="3" TextTrimming="WordEllipsis" MaxWidth="900" HorizontalAlignment="Left"
                                Margin="0,0,0,28" Visibility="Collapsed" Tapped="OnDescriptionTapped" />

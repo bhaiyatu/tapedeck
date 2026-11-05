@@ -28,6 +28,8 @@ public static class Fmt
 
     public static Visibility ShowIf(string? value) => string.IsNullOrWhiteSpace(value) ? Visibility.Collapsed : Visibility.Visible;
 
+    public static Visibility HideIf(string? value) => string.IsNullOrWhiteSpace(value) ? Visibility.Visible : Visibility.Collapsed;
+
     public static Visibility ShowIfAny(int count) => count > 0 ? Visibility.Visible : Visibility.Collapsed;
 
     public static Visibility ShowObj(object? value) => value is null ? Visibility.Collapsed : Visibility.Visible;
@@ -63,7 +65,9 @@ public static class Fmt
         _ => "",
     };
 
-    public static CornerRadius ArtRadius(bool round) => round ? new CornerRadius(999) : new CornerRadius(6);
+    public static CornerRadius ArtRadius(bool round) => round ? new CornerRadius(999) : new CornerRadius(12);
+
+    public static CornerRadius SmallArtRadius(bool round) => round ? new CornerRadius(999) : new CornerRadius(8);
 
     public static Brush? MoodBrush(object? argb)
     {

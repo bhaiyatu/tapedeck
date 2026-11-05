@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Page
     x:Class="Tapedeck.Views.LibraryPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -9,7 +9,7 @@
 
     <Grid>
         <ScrollViewer x:Name="Scroller">
-            <StackPanel Padding="36,20,36,36">
+            <StackPanel Padding="{StaticResource PagePadding}">
                 <TextBlock Text="Library" Style="{StaticResource PageTitleStyle}" />
 
                 <Grid Margin="0,0,0,20" ColumnSpacing="12">
@@ -17,15 +17,17 @@
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <SelectorBar x:Name="Tabs" SelectionChanged="OnTabChanged">
-                        <SelectorBarItem Text="Playlists" Tag="FEmusic_liked_playlists" IsSelected="True" />
-                        <SelectorBarItem Text="Songs" Tag="FEmusic_liked_videos" />
-                        <SelectorBarItem Text="Albums" Tag="FEmusic_liked_albums" />
-                        <SelectorBarItem Text="Artists" Tag="FEmusic_library_corpus_track_artists" />
-                        <SelectorBarItem Text="Subscriptions" Tag="FEmusic_library_corpus_artists" />
-                        <SelectorBarItem Text="History" Tag="FEmusic_history" />
-                    </SelectorBar>
-                    <Button x:Name="PlayAllButton" Grid.Column="1" Style="{StaticResource PillAccentButtonStyle}" Visibility="Collapsed"
+                    <ScrollViewer HorizontalScrollMode="Enabled" HorizontalScrollBarVisibility="Hidden"
+                                  VerticalScrollMode="Disabled" VerticalScrollBarVisibility="Disabled">
+                        <StackPanel x:Name="Tabs" Orientation="Horizontal">
+                            <ToggleButton Content="Playlists" Tag="FEmusic_liked_playlists" Style="{StaticResource ChipToggleStyle}" Click="OnTabClick" />
+                            <ToggleButton Content="Songs" Tag="FEmusic_liked_videos" Style="{StaticResource ChipToggleStyle}" Click="OnTabClick" />
+                            <ToggleButton Content="Albums" Tag="FEmusic_liked_albums" Style="{StaticResource ChipToggleStyle}" Click="OnTabClick" />
+                            <ToggleButton Content="Artists" Tag="FEmusic_library_corpus_track_artists" Style="{StaticResource ChipToggleStyle}" Click="OnTabClick" />
+                            <ToggleButton Content="Subscriptions" Tag="FEmusic_library_corpus_artists" Style="{StaticResource ChipToggleStyle}" Click="OnTabClick" />
+                        </StackPanel>
+                    </ScrollViewer>
+                    <Button x:Name="PlayAllButton" Grid.Column="1" Style="{StaticResource PillBrandButtonStyle}" Visibility="Collapsed"
                             VerticalAlignment="Center" Click="OnPlayAll">
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <FontIcon Glyph="&#xE768;" FontSize="14" />

@@ -26,6 +26,9 @@ public sealed class InnerTubeClient
         _http = new HttpClient(handler ?? new SocketsHttpHandler
         {
             UseCookies = false,
+            // Never follow redirects: HttpClient would re-send our manually added Cookie header
+            // (the Google session) to whatever host a redirect points at.
+            AllowAutoRedirect = false,
             AutomaticDecompression = DecompressionMethods.All,
             PooledConnectionLifetime = TimeSpan.FromMinutes(5),
             MaxResponseHeadersLength = 256, // KB; YouTube sends very large Set-Cookie / CSP headers
@@ -35,10 +38,37 @@ public sealed class InnerTubeClient
         };
     }
 
-    public string ClientVersion { get; set; } = "1.20261104.00.00";
-    public string Language { get; set; } = "en";
-    public string Region { get; set; } = "US";
-    public string? VisitorData { get; set; }
+    // Values below can be updated from the player page; only well-formed ones are accepted,
+    // since they are sent as request headers alongside the session cookies.
+    private string _clientVersion = "1.20261104.00.00";
+    private string _language = "en";
+    private string _region = "US";
+    private string? _visitorData;
+
+    public string ClientVersion
+    {
+        get => _clientVersion;
+        set => _clientVersion = Validate.ClientVersion(value) ?? _clientVersion;
+    }
+
+    public string Language
+    {
+        get => _language;
+        set => _language = Validate.Locale(value) ?? _language;
+    }
+
+    public string Region
+    {
+        get => _region;
+        set => _region = Validate.Locale(value) ?? _region;
+    }
+
+    public string? VisitorData
+    {
+        get => _visitorData;
+        set => _visitorData = Validate.VisitorData(value) ?? _visitorData;
+    }
+
     public string UserAgent { get; set; } = DefaultUserAgent;
 
     /// <summary>Returns the Cookie header for music.youtube.com, or null when signed out.</summary>
@@ -72,26 +102,29 @@ public sealed class InnerTubeClient
             Content = new StringContent(body.ToJsonString(), Encoding.UTF8, "application/json"),
         };
         req.Headers.TryAddWithoutValidation("User-Agent", UserAgent);
-        req.Headers.TryAddWithoutValidation("Origin", Origin);
-        req.Headers.TryAddWithoutValidation("X-Origin", Origin);
+        req.Headers.Add("Origin", Origin);
+        req.Headers.Add("X-Origin", Origin);
         req.Headers.Referrer = new Uri(Origin + "/");
-        req.Headers.TryAddWithoutValidation("X-Youtube-Client-Name", "67");
-        req.Headers.TryAddWithoutValidation("X-Youtube-Client-Version", ClientVersion);
+        req.Headers.Add("X-Youtube-Client-Name", "67");
+        req.Headers.Add("X-Youtube-Client-Version", ClientVersion);
         req.Headers.AcceptLanguage.Add(new StringWithQualityHeaderValue(Language));
-        if (VisitorData is not null) req.Headers.TryAddWithoutValidation("X-Goog-Visitor-Id", VisitorData);
+        if (VisitorData is not null) req.Headers.Add("X-Goog-Visitor-Id", VisitorData);
 
+        // The session is only ever attached to requests for the fixed music.youtube.com origin over HTTPS.
         var cookies = CookieProvider is null ? null : await CookieProvider().ConfigureAwait(false);
-        if (!string.IsNullOrEmpty(cookies))
+        if (!string.IsNullOrEmpty(cookies) && req.RequestUri is { Scheme: "https", Host: "music.youtube.com" } && Validate.IsHeaderSafe(cookies))
         {
             req.Headers.TryAddWithoutValidation("Cookie", cookies);
             if (BuildAuthorization(cookies) is { } auth)
             {
-                req.Headers.TryAddWithoutValidation("Authorization", auth);
-                req.Headers.TryAddWithoutValidation("X-Goog-AuthUser", "0");
+                req.Headers.Add("Authorization", auth);
+                req.Headers.Add("X-Goog-AuthUser", "0");
             }
         }
 
         using var res = await _http.SendAsync(req, ct).ConfigureAwait(false);
+        if ((int)res.StatusCode is >= 300 and < 400)
+            throw new HttpRequestException($"YouTube Music redirected the request ({(int)res.StatusCode}); not following it.");
         if (res.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
             throw new AuthExpiredException($"YouTube Music rejected the request ({(int)res.StatusCode}). Try signing in again.");
         var text = await res.Content.ReadAsStringAsync(ct).ConfigureAwait(false);

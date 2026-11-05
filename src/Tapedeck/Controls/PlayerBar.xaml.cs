@@ -26,6 +26,12 @@ public sealed partial class PlayerBar : UserControl, INotifyPropertyChanged
         SeekSlider.ValueChanged += OnSeekValueChanged;
 
         Player.PropertyChanged += OnPlayerChanged;
+        ActualThemeChanged += (_, _) =>
+        {
+            PropertyChanged?.Invoke(this, new(nameof(ShuffleBrush)));
+            PropertyChanged?.Invoke(this, new(nameof(RepeatBrush)));
+            PropertyChanged?.Invoke(this, new(nameof(LikeBrush)));
+        };
         SyncVolume();
         UpdateTimeline();
     }
@@ -37,10 +43,11 @@ public sealed partial class PlayerBar : UserControl, INotifyPropertyChanged
     /// <summary>Raised when the user toggles the queue or lyrics panel ("queue" / "lyrics" / null).</summary>
     public event EventHandler<string?>? PanelRequested;
 
-    public Brush ShuffleBrush => Player.IsShuffle ? Accent : Normal;
-    public Brush RepeatBrush => Player.Repeat != RepeatMode.Off ? Accent : Normal;
-    private static Brush Accent => (Brush)Application.Current.Resources["AccentTextFillColorPrimaryBrush"];
-    private static Brush Normal => (Brush)Application.Current.Resources["TextFillColorPrimaryBrush"];
+    public Brush ShuffleBrush => Player.IsShuffle ? Accent : Muted;
+    public Brush RepeatBrush => Player.Repeat != RepeatMode.Off ? Accent : Muted;
+    public Brush LikeBrush => Player.IsLiked ? Accent : Muted;
+    private static Brush Accent => (Brush)Application.Current.Resources["BrandGradient"];
+    private Brush Muted => (Brush)Tapedeck.ResourceExtensions.ThemeLookup(Resources, "TextMuted");
 
     public void SetPanelState(string? panel)
     {
@@ -66,6 +73,9 @@ public sealed partial class PlayerBar : UserControl, INotifyPropertyChanged
                 break;
             case nameof(PlayerService.Repeat):
                 PropertyChanged?.Invoke(this, new(nameof(RepeatBrush)));
+                break;
+            case nameof(PlayerService.LikeStatus):
+                PropertyChanged?.Invoke(this, new(nameof(LikeBrush)));
                 break;
         }
     }

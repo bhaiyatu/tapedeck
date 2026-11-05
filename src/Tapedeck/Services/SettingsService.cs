@@ -17,6 +17,15 @@ public sealed class AppSettings
     public string Theme { get; set; } = "Default";
     public string? SidePanel { get; set; }
     public bool ShowNotifications { get; set; }
+
+    /// <summary>
+    /// When false, the Google session is kept in an in-memory (InPrivate) profile and is gone when
+    /// Tapedeck closes; nothing about the sign-in is written to disk.
+    /// </summary>
+    public bool StaySignedIn { get; set; } = true;
+
+    /// <summary>Look up synced lyrics on lrclib.net (sends the track's title/artist, nothing else).</summary>
+    public bool UseLrclib { get; set; } = true;
     public int WindowWidth { get; set; } = 1320;
     public int WindowHeight { get; set; } = 860;
 }

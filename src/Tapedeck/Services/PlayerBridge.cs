@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.Web.WebView2.Core;
+using Tapedeck.Services.Api;
 
 namespace Tapedeck.Services;
 
@@ -38,14 +39,11 @@ public sealed class PlayerBridge
     {
         _view = view;
         var env = await WebViewHost.GetEnvironmentAsync();
-        await view.EnsureCoreWebView2Async(env);
+        var options = WebViewHost.ControllerOptions(env);
+        if (options is null) await view.EnsureCoreWebView2Async(env);
+        else await view.EnsureCoreWebView2Async(env, options);
         var core = view.CoreWebView2;
-
-        core.Settings.AreDevToolsEnabled = true;
-        core.Settings.AreDefaultContextMenusEnabled = false;
-        core.Settings.IsStatusBarEnabled = false;
-        core.Settings.AreBrowserAcceleratorKeysEnabled = false;
-        core.Settings.IsZoomControlEnabled = false;
+        WebViewHost.Harden(core, allowWebMessages: true);
 
         await EnsureConsentCookieAsync(core);
 
@@ -55,24 +53,37 @@ public sealed class PlayerBridge
         core.WebMessageReceived += OnMessage;
         core.NavigationStarting += (_, e) =>
         {
+            // The hidden player only ever shows YouTube Music (plus Google's consent / sign-in hops).
+            // Anything else is cancelled, so our script and signed-in cookies never sit under another site.
+            if (!Uri.TryCreate(e.Uri, UriKind.Absolute, out var target) || !WebViewHost.IsPlayerHost(target))
+            {
+                DebugLog($"blocked player navigation to {e.Uri}");
+                e.Cancel = true;
+                return;
+            }
             // A real navigation (sign-in change, reload) throws away the page; wait for "ready" again.
-            if (e.IsRedirected || !e.Uri.StartsWith(PlayerUrl, StringComparison.Ordinal) || IsReady)
-                ResetReady();
+            ResetReady();
         };
         core.NavigationCompleted += (_, e) =>
         {
             DebugLog($"navigation completed: {core.Source} success={e.IsSuccess} status={e.HttpStatusCode} error={e.WebErrorStatus}");
-            if (Uri.TryCreate(core.Source, UriKind.Absolute, out var uri) && uri.Host != "music.youtube.com")
+            if (Uri.TryCreate(core.Source, UriKind.Absolute, out var uri) && uri.Host != "music.youtube.com" && WebViewHost.IsPlayerHost(uri))
                 BlockedByInterstitial?.Invoke(this, uri);
         };
         // Don't let the page open popups (share dialogs, help links) in new windows.
         core.NewWindowRequested += (_, e) => e.Handled = true;
+        // The page is invisible, so a JavaScript alert/confirm would hang playback with no way to answer it.
+        core.Settings.AreDefaultScriptDialogsEnabled = false;
+        core.ScriptDialogOpening += (_, e) => e.Accept();
 
         _core.TrySetResult(core);
         core.Navigate(PlayerUrl);
+#if DEBUG
         if (DebugEnabled) StartEvalChannel(core);
+#endif
     }
 
+#if DEBUG
     private FileSystemWatcher? _evalWatcher;
 
     /// <summary>
@@ -112,6 +123,7 @@ public sealed class PlayerBridge
         _evalWatcher.Changed += (_, _) => Run();
         _evalWatcher.Created += (_, _) => Run();
     }
+#endif
 
     private void ResetReady()
     {
@@ -133,10 +145,17 @@ public sealed class PlayerBridge
         core.CookieManager.AddOrUpdateCookie(cookie);
     }
 
-    /// <summary>Set TAPEDECK_DEBUG=1 (or run --selftest) to log bridge traffic to %LOCALAPPDATA%\Tapedeck\bridge.log.</summary>
-    private static readonly bool DebugEnabled =
-        Environment.GetEnvironmentVariable("TAPEDECK_DEBUG") == "1" || SelfTest.IsRequested;
+    /// <summary>
+    /// Debug builds only: set TAPEDECK_DEBUG=1 to log bridge traffic to %LOCALAPPDATA%\Tapedeck\bridge.log
+    /// and enable the eval / command channels. Release builds compile all of this out.
+    /// </summary>
+#if DEBUG
+    private static readonly bool DebugEnabled = Environment.GetEnvironmentVariable("TAPEDECK_DEBUG") == "1";
+#else
+    private const bool DebugEnabled = false;
+#endif
 
+    [System.Diagnostics.Conditional("DEBUG")]
     public static void DebugLog(string line)
     {
         if (!DebugEnabled) return;
@@ -165,6 +184,30 @@ public sealed class PlayerBridge
         _view?.CoreWebView2?.Navigate(PlayerUrl);
     }
 
+    /// <summary>Navigates the player (to an allowed host) and waits for the page to finish, with a timeout.</summary>
+    public async Task NavigateAndWaitAsync(string url, TimeSpan timeout)
+    {
+        if (_view?.CoreWebView2 is not { } core) return;
+        var done = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        void Handler(CoreWebView2 s, CoreWebView2NavigationCompletedEventArgs e) => done.TrySetResult();
+        core.NavigationCompleted += Handler;
+        try
+        {
+            ResetReady();
+            core.Navigate(url);
+            await Task.WhenAny(done.Task, Task.Delay(timeout));
+        }
+        finally
+        {
+            core.NavigationCompleted -= Handler;
+        }
+    }
+
+    public async Task RestoreConsentAsync()
+    {
+        if (_view?.CoreWebView2 is { } core) await EnsureConsentCookieAsync(core);
+    }
+
     public bool IsMuted
     {
         get => _view?.CoreWebView2?.IsMuted ?? false;
@@ -174,29 +217,42 @@ public sealed class PlayerBridge
         }
     }
 
+#if DEBUG
     public void OpenDevTools() => _view?.CoreWebView2?.OpenDevToolsWindow();
+#endif
 
     private void OnMessage(CoreWebView2 sender, CoreWebView2WebMessageReceivedEventArgs e)
     {
+        // Only YouTube Music's own top-level page may talk to the app.
+        if (!Uri.TryCreate(e.Source, UriKind.Absolute, out var source)
+            || source.Scheme != Uri.UriSchemeHttps || source.Host != "music.youtube.com")
+        {
+            return;
+        }
+
         JsonNode? msg;
         try
         {
             msg = JsonNode.Parse(e.WebMessageAsJson);
+            if (msg is not JsonObject) return;
+            Dispatch(msg);
         }
-        catch (JsonException)
+        catch (Exception ex) when (ex is JsonException or InvalidOperationException or FormatException)
         {
-            return;
+            // Malformed message: ignore.
         }
-        if (msg is null) return;
+    }
 
+    private void Dispatch(JsonNode msg)
+    {
         var type = (string?)msg["type"];
-        if (type != "state") DebugLog($"js: {e.WebMessageAsJson}");
+        if (type != "state") DebugLog($"js: {msg.ToJsonString()}");
         switch (type)
         {
             case "state":
                 StateChanged?.Invoke(this, ParseState(msg));
                 break;
-            case "advanced" when (string?)msg["videoId"] is { } id:
+            case "advanced" when Validate.VideoId((string?)msg["videoId"]) is { } id:
                 Advanced?.Invoke(this, id);
                 break;
             case "ended":
@@ -204,27 +260,34 @@ public sealed class PlayerBridge
                 Ended?.Invoke(this, EventArgs.Empty);
                 break;
             case "error":
-                Error?.Invoke(this, (string?)msg["message"] is { Length: > 0 } m ? m : $"Playback error ({msg["code"]})");
+                var text = (string?)msg["message"];
+                Error?.Invoke(this, string.IsNullOrWhiteSpace(text) ? "Playback error" : text.Length > 200 ? text[..200] : text);
                 break;
             case "ready":
                 _ready.TrySetResult();
+                // These values end up in request headers; accept only their known shapes.
                 Ready?.Invoke(this, new BridgeReady(
-                    (string?)msg["clientVersion"],
-                    (string?)msg["visitorData"],
-                    msg["loggedIn"]?.GetValue<bool>() ?? false,
-                    (string?)msg["hl"],
-                    (string?)msg["gl"]));
+                    Validate.ClientVersion((string?)msg["clientVersion"]),
+                    Validate.VisitorData((string?)msg["visitorData"]),
+                    msg["loggedIn"] is JsonValue li && li.TryGetValue<bool>(out var b) && b,
+                    Validate.Locale((string?)msg["hl"]),
+                    Validate.Locale((string?)msg["gl"])));
                 break;
         }
     }
 
     private static BridgeState ParseState(JsonNode m) => new(
-        (string?)m["videoId"],
-        m["playing"]?.GetValue<bool>() ?? false,
-        m["buffering"]?.GetValue<bool>() ?? false,
-        m["position"]?.GetValue<double>() ?? 0,
-        m["duration"]?.GetValue<double>() ?? 0,
-        m["ad"]?.GetValue<bool>() ?? false);
+        Validate.VideoId((string?)m["videoId"]),
+        Bool(m["playing"]),
+        Bool(m["buffering"]),
+        Num(m["position"]),
+        Num(m["duration"]),
+        Bool(m["ad"]));
+
+    private static bool Bool(JsonNode? n) => n is JsonValue v && v.TryGetValue<bool>(out var b) && b;
+
+    private static double Num(JsonNode? n) =>
+        n is JsonValue v && v.TryGetValue<double>(out var d) && double.IsFinite(d) && d >= 0 ? d : 0;
 
     private async Task<string?> RunAsync(string js, bool waitForReady = true)
     {

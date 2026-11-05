@@ -1,3 +1,5 @@
+#if DEBUG
+// Debug builds only. Release builds contain none of this: no file-driven commands, no script channel.
 using Tapedeck.Models;
 using Tapedeck.Views;
 
@@ -88,6 +90,49 @@ public static class DevCommands
             case "theme": App.MainWindow.ApplyTheme(arg); break;
             case "signin": _ = App.MainWindow.SignInAsync(); break;
             case "toast": App.MainWindow.ShowToast(arg); break;
+            case "privatecheck": await PrivateProfileCheckAsync(); break;
+        }
+    }
+
+    /// <summary>
+    /// Verifies the "don't stay signed in" design: two InPrivate controllers with the same profile name
+    /// share cookies (so sign-in reaches the player), and the normal on-disk profile never sees them.
+    /// Writes the result to privatecheck.out.
+    /// </summary>
+    private static async Task PrivateProfileCheckAsync()
+    {
+        var env = await WebViewHost.GetEnvironmentAsync();
+        var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(App.MainWindow);
+        var windowRef = Microsoft.Web.WebView2.Core.CoreWebView2ControllerWindowReference.CreateFromWindowHandle((ulong)hwnd);
+
+        Microsoft.Web.WebView2.Core.CoreWebView2ControllerOptions PrivateOptions()
+        {
+            var o = env.CreateCoreWebView2ControllerOptions();
+            o.ProfileName = WebViewHost.PrivateProfileName;
+            o.IsInPrivateModeEnabled = true;
+            return o;
+        }
+
+        var a = await env.CreateCoreWebView2ControllerAsync(windowRef, PrivateOptions());
+        var b = await env.CreateCoreWebView2ControllerAsync(windowRef, PrivateOptions());
+        var disk = await env.CreateCoreWebView2ControllerAsync(windowRef);
+        try
+        {
+            var probe = a.CoreWebView2.CookieManager.CreateCookie("TD_PRIVATE_PROBE", "1", ".google.com", "/");
+            probe.IsSecure = true;
+            a.CoreWebView2.CookieManager.AddOrUpdateCookie(probe);
+            await Task.Delay(300);
+            var shared = (await b.CoreWebView2.CookieManager.GetCookiesAsync("https://accounts.google.com")).Any(c => c.Name == "TD_PRIVATE_PROBE");
+            var leaked = (await disk.CoreWebView2.CookieManager.GetCookiesAsync("https://accounts.google.com")).Any(c => c.Name == "TD_PRIVATE_PROBE");
+            await File.WriteAllTextAsync(Path.Combine(SettingsService.DataFolder, "privatecheck.out"),
+                $"sharedBetweenPrivateWebViews={shared} visibleInDiskProfile={leaked} inPrivate={a.CoreWebView2.Profile.IsInPrivateModeEnabled}");
+        }
+        finally
+        {
+            a.Close();
+            b.Close();
+            disk.Close();
         }
     }
 }
+#endif

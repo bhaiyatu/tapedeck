@@ -12,16 +12,23 @@
     UseSystemFocusVisuals="True"
     KeyDown="OnKeyDown">
 
-    <StackPanel x:Name="Root" Width="{x:Bind CardWidth, Mode=OneWay}" Spacing="8" Background="Transparent">
+    <StackPanel x:Name="Root" Width="{x:Bind CardWidth, Mode=OneWay}" Spacing="10" Background="Transparent">
         <Grid x:Name="ArtHost"
               Height="{x:Bind ArtHeight, Mode=OneWay}"
               CornerRadius="{x:Bind h:Fmt.ArtRadius(Item.IsRound), Mode=OneWay}"
-              Background="{ThemeResource ArtPlaceholder}">
-            <FontIcon Glyph="&#xE8D6;" FontSize="32" Opacity="0.35" />
+              Background="{ThemeResource ArtPlaceholder}"
+              SizeChanged="OnArtSizeChanged">
+            <FontIcon Glyph="&#xE8D6;" FontSize="30" Foreground="{ThemeResource TextFaint}" />
             <Image Source="{x:Bind h:Fmt.Img(Item.ThumbnailUrl), Mode=OneWay}" Stretch="UniformToFill" />
-            <Grid x:Name="HoverOverlay" Background="{ThemeResource CardHoverOverlay}" Opacity="0">
+            <Grid x:Name="HoverOverlay" Opacity="0">
+                <Grid.Background>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                        <GradientStop Color="#00000000" Offset="0.45" />
+                        <GradientStop Color="#8C000000" Offset="1" />
+                    </LinearGradientBrush>
+                </Grid.Background>
                 <Grid.OpacityTransition>
-                    <ScalarTransition Duration="0:0:0.12" />
+                    <ScalarTransition Duration="0:0:0.15" />
                 </Grid.OpacityTransition>
                 <Button x:Name="PlayButton"
                         Style="{StaticResource BigPlayButtonStyle}"
@@ -32,9 +39,9 @@
                         Click="OnPlayClick" />
             </Grid>
         </Grid>
-        <StackPanel Spacing="2" HorizontalAlignment="{x:Bind TextAlignment, Mode=OneWay}">
+        <StackPanel Spacing="2" HorizontalAlignment="{x:Bind TextAlignment, Mode=OneWay}" Padding="2,0">
             <TextBlock Text="{x:Bind Item.Title, Mode=OneWay}"
-                       Style="{StaticResource BodyStrongTextBlockStyle}"
+                       FontSize="13.5" FontWeight="SemiBold" Foreground="{ThemeResource TextStrong}"
                        TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis"
                        TextAlignment="{x:Bind TextAlign, Mode=OneWay}" />
             <TextBlock Text="{x:Bind Item.Subtitle, Mode=OneWay}"

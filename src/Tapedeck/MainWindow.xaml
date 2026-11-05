@@ -7,11 +7,10 @@
     xmlns:h="using:Tapedeck.Helpers"
     Title="Tapedeck">
 
-    <Grid x:Name="Root" PreviewKeyDown="OnRootPreviewKeyDown">
+    <Grid x:Name="Root" Background="{ThemeResource AppBackground}" PreviewKeyDown="OnRootPreviewKeyDown">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
-            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
         <Grid.KeyboardAccelerators>
@@ -20,111 +19,133 @@
             <KeyboardAccelerator Modifiers="Control" Key="Up" Invoked="OnAccelerator" />
             <KeyboardAccelerator Modifiers="Control" Key="Down" Invoked="OnAccelerator" />
             <KeyboardAccelerator Modifiers="Control" Key="F" Invoked="OnAccelerator" />
+            <KeyboardAccelerator Modifiers="Control" Key="K" Invoked="OnAccelerator" />
             <KeyboardAccelerator Modifiers="Control" Key="L" Invoked="OnAccelerator" />
             <KeyboardAccelerator Modifiers="Control" Key="S" Invoked="OnAccelerator" />
             <KeyboardAccelerator Modifiers="Control" Key="R" Invoked="OnAccelerator" />
         </Grid.KeyboardAccelerators>
 
         <!-- The hidden YouTube Music player. 1×1 and transparent, but "visible" to Chromium so it isn't throttled. -->
-        <WebView2 x:Name="PlayerWebView" Grid.Row="0" Width="1" Height="1" Opacity="0" IsHitTestVisible="False" IsTabStop="False"
+        <WebView2 x:Name="PlayerWebView" Width="1" Height="1" Opacity="0" IsHitTestVisible="False" IsTabStop="False"
                   HorizontalAlignment="Left" VerticalAlignment="Top" />
 
-        <TitleBar x:Name="AppTitleBar" Grid.Row="0" Title="Tapedeck"
+        <!-- Title bar: brand, back, centred quick search. -->
+        <TitleBar x:Name="AppTitleBar" Title="Tapedeck" Height="52"
                   IsBackButtonVisible="True" IsPaneToggleButtonVisible="True"
                   BackRequested="OnBackRequested" PaneToggleRequested="OnPaneToggleRequested">
             <TitleBar.IconSource>
                 <ImageIconSource ImageSource="ms-appx:///Assets/Tapedeck.png" />
             </TitleBar.IconSource>
             <TitleBar.Content>
-                <AutoSuggestBox x:Name="SearchBox" PlaceholderText="Search songs, albums, artists, podcasts"
-                                QueryIcon="Find" MinWidth="320" MaxWidth="560" VerticalAlignment="Center"
-                                TextChanged="OnSearchTextChanged" QuerySubmitted="OnSearchSubmitted"
-                                AutomationProperties.Name="Search" />
+                <Grid MaxWidth="520" MinWidth="300" HorizontalAlignment="Stretch">
+                    <AutoSuggestBox x:Name="SearchBox" PlaceholderText="Search music, artists, podcasts" QueryIcon="Find"
+                                    VerticalAlignment="Center" CornerRadius="10"
+                                    TextChanged="OnSearchTextChanged" QuerySubmitted="OnSearchSubmitted"
+                                    AutomationProperties.Name="Search" />
+                    <Border HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,40,0" Padding="6,1"
+                            CornerRadius="5" BorderThickness="1" BorderBrush="{ThemeResource SurfaceStroke}"
+                            IsHitTestVisible="False" Visibility="{x:Bind h:Fmt.HideIf(SearchBox.Text), Mode=OneWay}">
+                        <TextBlock Text="Ctrl K" FontSize="11" Foreground="{ThemeResource TextFaint}" />
+                    </Border>
+                </Grid>
             </TitleBar.Content>
-            <TitleBar.RightHeader>
-                <Button x:Name="AccountButton" Background="Transparent" BorderThickness="0" Padding="4" Margin="0,0,8,0"
-                        CornerRadius="16" ToolTipService.ToolTip="Account">
-                    <PersonPicture Width="28" Height="28"
-                                   ProfilePicture="{x:Bind h:Fmt.Img(Auth.Account.PhotoUrl), Mode=OneWay}"
-                                   DisplayName="{x:Bind Auth.Account.Name, Mode=OneWay, FallbackValue=''}" />
-                    <Button.Flyout>
-                        <MenuFlyout x:Name="AccountMenu" Opening="OnAccountMenuOpening" />
-                    </Button.Flyout>
-                </Button>
-            </TitleBar.RightHeader>
         </TitleBar>
 
-        <Grid Grid.Row="1">
+        <!-- One 12px grid: sidebar | canvas (+ side panel), with the account card and the player
+             sharing a bottom row so their edges line up exactly. -->
+        <Grid Grid.Row="1" Padding="12,0,12,12" ColumnSpacing="12" RowSpacing="12">
             <Grid.ColumnDefinitions>
+                <ColumnDefinition x:Name="SidebarColumn" Width="220" />
                 <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
 
-            <NavigationView x:Name="NavView" PaneDisplayMode="Left" IsBackButtonVisible="Collapsed"
-                            IsPaneToggleButtonVisible="False" IsSettingsVisible="True" OpenPaneLength="220"
-                            SelectionChanged="OnNavSelectionChanged">
-                <NavigationView.MenuItems>
-                    <NavigationViewItem Content="Home" Tag="home">
-                        <NavigationViewItem.Icon><FontIcon Glyph="&#xE80F;" /></NavigationViewItem.Icon>
-                    </NavigationViewItem>
-                    <NavigationViewItem Content="Explore" Tag="explore">
-                        <NavigationViewItem.Icon><FontIcon Glyph="&#xE7B3;" /></NavigationViewItem.Icon>
-                    </NavigationViewItem>
-                    <NavigationViewItem Content="Library" Tag="library">
-                        <NavigationViewItem.Icon><FontIcon Glyph="&#xE8F1;" /></NavigationViewItem.Icon>
-                    </NavigationViewItem>
-                    <NavigationViewItemSeparator />
-                    <NavigationViewItem Content="Liked music" Tag="liked">
-                        <NavigationViewItem.Icon><FontIcon Glyph="&#xEB51;" /></NavigationViewItem.Icon>
-                    </NavigationViewItem>
-                    <NavigationViewItem Content="Charts" Tag="charts">
-                        <NavigationViewItem.Icon><FontIcon Glyph="&#xE9D2;" /></NavigationViewItem.Icon>
-                    </NavigationViewItem>
-                    <NavigationViewItem Content="New releases" Tag="new">
-                        <NavigationViewItem.Icon><FontIcon Glyph="&#xE734;" /></NavigationViewItem.Icon>
-                    </NavigationViewItem>
-                    <NavigationViewItem Content="Moods &amp; genres" Tag="moods">
-                        <NavigationViewItem.Icon><FontIcon Glyph="&#xE790;" /></NavigationViewItem.Icon>
-                    </NavigationViewItem>
-                </NavigationView.MenuItems>
+            <!-- ───────────── Sidebar (Kaset layout) ───────────── -->
+            <ScrollViewer x:Name="Sidebar" VerticalScrollBarVisibility="Hidden">
+                <StackPanel x:Name="NavPanel" />
+            </ScrollViewer>
 
-                <Frame x:Name="ContentFrame" Navigated="OnFrameNavigated" />
-            </NavigationView>
+            <!-- Account, pinned to the bottom like Kaset; same height and shape as the player. -->
+            <Button x:Name="AccountButton" Grid.Row="1" Style="{StaticResource SoftButtonStyle}" Height="76"
+                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Padding="12,0"
+                    Background="{ThemeResource CanvasBackground}" BorderBrush="{ThemeResource CanvasStroke}" BorderThickness="1"
+                    CornerRadius="18" AutomationProperties.Name="Account">
+                    <Grid ColumnSpacing="10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <PersonPicture Width="40" Height="40"
+                                       ProfilePicture="{x:Bind h:Fmt.Img(Auth.Account.PhotoUrl), Mode=OneWay}"
+                                       DisplayName="{x:Bind Auth.Account.Name, Mode=OneWay, FallbackValue=''}" />
+                        <StackPanel x:Name="AccountText" Grid.Column="1" VerticalAlignment="Center">
+                            <TextBlock x:Name="AccountName" Text="Sign in" FontWeight="SemiBold" FontSize="13" TextTrimming="CharacterEllipsis"
+                                       Foreground="{ThemeResource TextStrong}" />
+                            <TextBlock x:Name="AccountDetail" Text="Library &amp; mixes" Style="{StaticResource SecondaryTextStyle}" FontSize="11.5" MaxLines="1" />
+                        </StackPanel>
+                        <FontIcon x:Name="AccountChevron" Grid.Column="2" Glyph="&#xE70D;" FontSize="10" Foreground="{ThemeResource TextFaint}" />
+                    </Grid>
+                    <Button.Flyout>
+                        <MenuFlyout x:Name="AccountMenu" Opening="OnAccountMenuOpening" Placement="TopEdgeAlignedLeft" />
+                    </Button.Flyout>
+            </Button>
 
-            <!-- Side panel: queue / lyrics -->
-            <Grid x:Name="SidePanel" Grid.Column="1" Width="370" Visibility="Collapsed"
-                  Background="{ThemeResource SidePanelBackground}"
-                  BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="1,0,0,0">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="*" />
-                </Grid.RowDefinitions>
-                <Grid Padding="8,6,6,0">
-                    <SelectorBar x:Name="PanelTabs" SelectionChanged="OnPanelTabChanged">
-                        <SelectorBarItem x:Name="QueueTab" Text="Up next" Tag="queue" />
-                        <SelectorBarItem x:Name="LyricsTab" Text="Lyrics" Tag="lyrics" />
-                    </SelectorBar>
-                    <Button HorizontalAlignment="Right" VerticalAlignment="Center" Style="{StaticResource IconButtonStyle}"
-                            Content="&#xE711;" FontSize="12" ToolTipService.ToolTip="Close panel" Click="OnClosePanel" />
-                </Grid>
-                <c:QueuePanel x:Name="QueueView" Grid.Row="1" />
-                <c:LyricsPanel x:Name="LyricsView" Grid.Row="1" Visibility="Collapsed" />
+            <!-- ───────────── Main area ───────────── -->
+            <Grid Grid.Column="1" ColumnSpacing="12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <Border x:Name="ContentCanvas" Background="{ThemeResource CanvasBackground}" BorderBrush="{ThemeResource CanvasStroke}"
+                        BorderThickness="1" CornerRadius="18">
+                    <Frame x:Name="ContentFrame" Navigated="OnFrameNavigated" />
+                </Border>
+
+                <!-- Side panel: Up next / Lyrics -->
+                <Border x:Name="SidePanel" Grid.Column="1" Width="360" Visibility="Collapsed"
+                        Background="{ThemeResource CanvasBackground}" BorderBrush="{ThemeResource CanvasStroke}"
+                        BorderThickness="1" CornerRadius="18">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+                        <Grid Padding="16,16,12,8">
+                            <!-- Segmented control: a quiet track with one solid pill, no outlines. -->
+                            <Border HorizontalAlignment="Left" Background="{ThemeResource SurfaceBackground}" CornerRadius="12" Padding="3">
+                                <StackPanel Orientation="Horizontal" Spacing="2">
+                                    <ToggleButton x:Name="QueueTab" Content="Up next" Style="{StaticResource SegmentToggleStyle}" Click="OnQueueTab" />
+                                    <ToggleButton x:Name="LyricsTab" Content="Lyrics" Style="{StaticResource SegmentToggleStyle}" Click="OnLyricsTab" />
+                                </StackPanel>
+                            </Border>
+                            <Button HorizontalAlignment="Right" VerticalAlignment="Center" Style="{StaticResource IconButtonStyle}"
+                                    Content="&#xE711;" FontSize="11" Width="32" Height="32" ToolTipService.ToolTip="Close panel" Click="OnClosePanel" />
+                        </Grid>
+                        <c:QueuePanel x:Name="QueueView" Grid.Row="1" />
+                        <c:LyricsPanel x:Name="LyricsView" Grid.Row="1" Visibility="Collapsed" />
+                    </Grid>
+                </Border>
+
+                <InfoBar x:Name="Toast" IsOpen="False" IsClosable="True" Severity="Informational"
+                         HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,16" MaxWidth="560" CornerRadius="12" />
+
+                <InfoBar x:Name="InterstitialBar" IsOpen="False" IsClosable="True" Severity="Warning" CornerRadius="12"
+                         HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,12,0,0" MaxWidth="640"
+                         Title="Playback is waiting on YouTube"
+                         Message="YouTube Music wants you to confirm something before it will play.">
+                    <InfoBar.ActionButton>
+                        <Button Content="Open" Click="OnOpenInterstitial" />
+                    </InfoBar.ActionButton>
+                </InfoBar>
             </Grid>
+
+            <!-- Player: spans exactly from the canvas's left edge to the side panel's right edge. -->
+            <c:PlayerBar x:Name="Bar" Grid.Row="1" Grid.Column="1" />
         </Grid>
-
-        <c:PlayerBar x:Name="Bar" Grid.Row="2" />
-
-        <!-- Transient status messages ("Added to queue", errors). -->
-        <InfoBar x:Name="Toast" Grid.Row="1" IsOpen="False" IsClosable="True" Severity="Informational"
-                 HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,16" MaxWidth="560" />
-
-        <InfoBar x:Name="InterstitialBar" Grid.Row="1" IsOpen="False" IsClosable="True" Severity="Warning"
-                 HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,12,0,0" MaxWidth="640"
-                 Title="Playback is waiting on YouTube"
-                 Message="YouTube Music wants you to confirm something before it will play.">
-            <InfoBar.ActionButton>
-                <Button Content="Open" Click="OnOpenInterstitial" />
-            </InfoBar.ActionButton>
-        </InfoBar>
     </Grid>
 </Window>

@@ -5,13 +5,14 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:h="using:Tapedeck.Helpers">
 
-    <Grid Height="92" Padding="16,8,20,8" ColumnSpacing="16"
-          Background="{ThemeResource PlayerBarBackground}"
-          BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,1,0,0">
+    <!-- Player panel: now playing · transport + timeline · panels + volume.
+         Same height, radius and surface as the sidebar's account card, so the bottom row reads as one band. -->
+    <Grid x:Name="Capsule" Height="76" Padding="8,8,16,8" ColumnSpacing="18" CornerRadius="18"
+          Background="{ThemeResource CanvasBackground}" BorderBrush="{ThemeResource CanvasStroke}" BorderThickness="1">
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="3*" MinWidth="220" />
-            <ColumnDefinition Width="4*" MaxWidth="720" />
-            <ColumnDefinition Width="3*" MinWidth="220" />
+            <ColumnDefinition Width="3*" MinWidth="230" MaxWidth="360" />
+            <ColumnDefinition Width="5*" MaxWidth="620" />
+            <ColumnDefinition Width="3*" MinWidth="200" MaxWidth="360" />
         </Grid.ColumnDefinitions>
 
         <!-- Now playing -->
@@ -21,70 +22,78 @@
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
-            <Grid Width="60" Height="60" CornerRadius="6" Background="{ThemeResource ArtPlaceholder}" VerticalAlignment="Center">
-                <FontIcon Glyph="&#xE8D6;" FontSize="22" Opacity="0.4" />
+            <Grid Width="58" Height="58" CornerRadius="12" Background="{ThemeResource ArtPlaceholder}" VerticalAlignment="Center">
+                <FontIcon Glyph="&#xE8D6;" FontSize="20" Foreground="{ThemeResource TextFaint}" />
                 <Image Source="{x:Bind h:Fmt.ImgSized(Player.Current.ThumbnailUrl, 60), Mode=OneWay}" Stretch="UniformToFill" />
-                <ProgressRing IsActive="{x:Bind Player.IsBuffering, Mode=OneWay}" Width="22" Height="22" Foreground="White" />
+                <Grid Background="#66000000" Visibility="{x:Bind Player.IsBuffering, Mode=OneWay}">
+                    <ProgressRing IsActive="{x:Bind Player.IsBuffering, Mode=OneWay}" Width="20" Height="20" Foreground="White" />
+                </Grid>
             </Grid>
-            <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+            <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="1">
                 <TextBlock x:Name="TitleText" Text="{x:Bind h:Fmt.NowPlayingTitle(Player.Current), Mode=OneWay}"
-                           Style="{StaticResource BodyStrongTextBlockStyle}" TextTrimming="CharacterEllipsis" MaxLines="1"
+                           FontWeight="SemiBold" FontSize="14" Foreground="{ThemeResource TextStrong}"
+                           TextTrimming="CharacterEllipsis" MaxLines="1"
                            Tapped="OnTitleTapped" ToolTipService.ToolTip="{x:Bind Player.Current.Title, Mode=OneWay, FallbackValue=''}" />
                 <TextBlock x:Name="ArtistText" Text="{x:Bind h:Fmt.NowPlayingArtist(Player.Current), Mode=OneWay}"
                            Style="{StaticResource SecondaryTextStyle}" MaxLines="1" Tapped="OnArtistTapped" />
-                <Border Background="{ThemeResource SystemFillColorCautionBackgroundBrush}" CornerRadius="3" Padding="6,1" HorizontalAlignment="Left"
+                <Border Background="{StaticResource BrandGradient}" CornerRadius="4" Padding="6,0" Margin="0,2,0,0" HorizontalAlignment="Left"
                         Visibility="{x:Bind Player.IsAd, Mode=OneWay}">
-                    <TextBlock Text="Ad playing" FontSize="11" />
+                    <TextBlock Text="AD" FontSize="10" FontWeight="SemiBold" Foreground="White" CharacterSpacing="60" />
                 </Border>
             </StackPanel>
             <Button Grid.Column="2" Style="{StaticResource IconButtonStyle}" VerticalAlignment="Center"
                     Content="{x:Bind h:Fmt.LikeGlyph(Player.IsLiked), Mode=OneWay}"
+                    Foreground="{x:Bind LikeBrush, Mode=OneWay}"
                     Visibility="{x:Bind Player.HasTrack, Mode=OneWay}"
                     ToolTipService.ToolTip="Like (Ctrl+L)" Click="OnLike" />
         </Grid>
 
         <!-- Transport + timeline -->
-        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="0">
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="10">
-                <Button Style="{StaticResource IconButtonStyle}" Content="&#xE8B1;" ToolTipService.ToolTip="Shuffle (Ctrl+S)"
-                        Opacity="{x:Bind h:Fmt.ActiveOpacity(Player.IsShuffle), Mode=OneWay}"
+        <Grid Grid.Column="1" VerticalAlignment="Center" RowSpacing="0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="6">
+                <Button Style="{StaticResource IconButtonStyle}" Content="&#xE8B1;" FontSize="14" ToolTipService.ToolTip="Shuffle (Ctrl+S)"
                         Foreground="{x:Bind ShuffleBrush, Mode=OneWay}" Click="OnShuffle" />
                 <Button Style="{StaticResource IconButtonStyle}" Content="&#xE892;" ToolTipService.ToolTip="Previous (Ctrl+←)" Click="OnPrevious" />
-                <Button Style="{StaticResource BigPlayButtonStyle}"
+                <Button Style="{StaticResource BigPlayButtonStyle}" Width="40" Height="40" CornerRadius="20" Margin="4,0"
                         Content="{x:Bind h:Fmt.PlayGlyph(Player.IsPlaying), Mode=OneWay}"
                         IsEnabled="{x:Bind Player.HasTrack, Mode=OneWay}"
                         ToolTipService.ToolTip="Play / pause (Space)" Click="OnPlayPause" />
                 <Button Style="{StaticResource IconButtonStyle}" Content="&#xE893;" ToolTipService.ToolTip="Next (Ctrl+→)" Click="OnNext" />
-                <Button Style="{StaticResource IconButtonStyle}"
+                <Button Style="{StaticResource IconButtonStyle}" FontSize="14"
                         Content="{x:Bind h:Fmt.RepeatGlyph(Player.Repeat), Mode=OneWay}"
-                        Opacity="{x:Bind h:Fmt.RepeatOpacity(Player.Repeat), Mode=OneWay}"
                         Foreground="{x:Bind RepeatBrush, Mode=OneWay}"
                         ToolTipService.ToolTip="Repeat (Ctrl+R)" Click="OnRepeat" />
             </StackPanel>
-            <Grid ColumnSpacing="10" Margin="0,-2,0,0">
+            <Grid Grid.Row="1" ColumnSpacing="10" Margin="0,-4,0,-6">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="44" />
+                    <ColumnDefinition Width="40" />
                     <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="44" />
+                    <ColumnDefinition Width="40" />
                 </Grid.ColumnDefinitions>
-                <TextBlock x:Name="PositionText" Text="0:00" Style="{StaticResource SecondaryTextStyle}" TextAlignment="Right" VerticalAlignment="Center" />
+                <TextBlock x:Name="PositionText" Text="0:00" Style="{StaticResource SecondaryTextStyle}" FontSize="11"
+                           TextAlignment="Right" VerticalAlignment="Center" />
                 <Slider x:Name="SeekSlider" Grid.Column="1" Minimum="0" Maximum="1" StepFrequency="1" SmallChange="5" LargeChange="15"
                         IsEnabled="{x:Bind Player.HasTrack, Mode=OneWay}" VerticalAlignment="Center"
                         AutomationProperties.Name="Seek" />
-                <TextBlock x:Name="DurationText" Grid.Column="2" Text="0:00" Style="{StaticResource SecondaryTextStyle}" VerticalAlignment="Center" />
+                <TextBlock x:Name="DurationText" Grid.Column="2" Text="0:00" Style="{StaticResource SecondaryTextStyle}" FontSize="11"
+                           VerticalAlignment="Center" />
             </Grid>
-        </StackPanel>
+        </Grid>
 
         <!-- Panels + volume -->
-        <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Spacing="4">
+        <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Spacing="2">
             <ToggleButton x:Name="LyricsToggle" Style="{StaticResource IconToggleButtonStyle}" Content="&#xE8D2;"
                           ToolTipService.ToolTip="Lyrics" Click="OnLyricsToggle" />
             <ToggleButton x:Name="QueueToggle" Style="{StaticResource IconToggleButtonStyle}" Content="&#xE90B;"
                           ToolTipService.ToolTip="Up next" Click="OnQueueToggle" />
-            <Button Style="{StaticResource IconButtonStyle}" Margin="8,0,0,0"
+            <Button Style="{StaticResource IconButtonStyle}" Margin="6,0,0,0"
                     Content="{x:Bind h:Fmt.VolumeGlyph(Player.Volume, Player.IsMuted), Mode=OneWay}"
                     ToolTipService.ToolTip="Mute" Click="OnMute" />
-            <Slider x:Name="VolumeSlider" Width="110" Minimum="0" Maximum="100" StepFrequency="1" SmallChange="5"
+            <Slider x:Name="VolumeSlider" Width="96" Minimum="0" Maximum="100" StepFrequency="1" SmallChange="5"
                     VerticalAlignment="Center" AutomationProperties.Name="Volume" ValueChanged="OnVolumeChanged" />
         </StackPanel>
     </Grid>

@@ -120,20 +120,27 @@ public sealed partial class AuthService : ObservableObject
         return true;
     }
 
+    /// <summary>
+    /// Signs out properly: ends the session on Google's side first (so a copied cookie stops working),
+    /// then wipes every cookie and all site data (storage, cache, service workers) from the profile.
+    /// </summary>
     public async Task SignOutAsync()
     {
         var core = await _bridge.CoreAsync;
-        foreach (var domain in new[] { "https://music.youtube.com", "https://www.youtube.com", "https://accounts.google.com", "https://www.google.com" })
-        {
-            var cookies = await core.CookieManager.GetCookiesAsync(domain);
-            foreach (var c in cookies)
-                if (c.Name != "SOCS") core.CookieManager.DeleteCookie(c);
-        }
         _cachedHeader = null;
+        if (IsSignedIn) await _bridge.NavigateAndWaitAsync("https://www.youtube.com/logout", TimeSpan.FromSeconds(10));
+        await WebViewHost.ClearProfileAsync(core);
         IsSignedIn = false;
         Account = null;
+        await _bridge.RestoreConsentAsync();
         _bridge.Reload();
         SessionChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>Wipes the on-disk session when the user turns "stay signed in" off.</summary>
+    public async Task ForgetStoredSessionAsync()
+    {
+        await SignOutAsync();
     }
 
     public static bool IsSessionCookie(CoreWebView2Cookie c) => SessionCookieNames.Contains(c.Name);

@@ -1,0 +1,135 @@
+# Builds Tapedeck on every push / PR. Pushing a tag like v0.2.0 also publishes a GitHub Release with:
+#   - Tapedeck-<version>-x64-setup.exe / -arm64-setup.exe   (per-user installer, no admin prompt)
+#   - Tapedeck-<version>-x64-portable.zip / -arm64-portable.zip
+#   - SHA256SUMS.txt and a signed build-provenance attestation for every file
+name: Build
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build (${{ matrix.arch }})
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x64
+            platform: x64
+          - arch: arm64
+            platform: ARM64
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Work out the version
+        id: ver
+        shell: pwsh
+        run: |
+          if ("${{ github.ref }}" -like "refs/tags/v*") {
+            $v = "${{ github.ref_name }}".TrimStart("v")
+          } else {
+            $base = ([xml](Get-Content src/Tapedeck/Tapedeck.csproj)).Project.PropertyGroup.Version | Where-Object { $_ } | Select-Object -First 1
+            $v = "$base-ci.${{ github.run_number }}"
+          }
+          "version=$v" >> $env:GITHUB_OUTPUT
+          Write-Output "Version: $v"
+
+      - name: Publish (self-contained, locked dependencies)
+        shell: pwsh
+        run: >
+          dotnet publish src/Tapedeck/Tapedeck.csproj -c Release
+          -r win-${{ matrix.arch }} -p:Platform=${{ matrix.platform }} --self-contained true
+          -p:RestoreLockedMode=true -p:Version=${{ steps.ver.outputs.version }}
+          -o publish/win-${{ matrix.arch }}
+
+      - name: Check release build has no debug hooks
+        shell: pwsh
+        run: |
+          $bytes = [IO.File]::ReadAllBytes("publish/win-${{ matrix.arch }}/Tapedeck.dll")
+          $text = [Text.Encoding]::Unicode.GetString($bytes) + [Text.Encoding]::UTF8.GetString($bytes)
+          foreach ($needle in "eval.js", "command.txt", "TAPEDECK_DEBUG", "OpenDevToolsWindow") {
+            if ($text.Contains($needle)) { throw "Release build contains debug hook: $needle" }
+          }
+          Write-Output "OK: no debug hooks in the release build."
+
+      - name: Portable zip
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force dist | Out-Null
+          Compress-Archive -Path "publish/win-${{ matrix.arch }}/*" -DestinationPath "dist/Tapedeck-${{ steps.ver.outputs.version }}-${{ matrix.arch }}-portable.zip"
+
+      - name: Installer
+        shell: pwsh
+        run: |
+          choco install innosetup --no-progress -y | Out-Null
+          $iscc = Join-Path ${env:ProgramFiles(x86)} "Inno Setup 6\ISCC.exe"
+          & $iscc "/DAppVersion=${{ steps.ver.outputs.version }}" "/DSourceDir=..\publish\win-${{ matrix.arch }}" "/DArch=${{ matrix.arch }}" installer\Tapedeck.iss
+          if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed" }
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tapedeck-${{ matrix.arch }}
+          path: dist/*
+          if-no-files-found: error
+
+  release:
+    name: Publish release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write       # create the release
+      id-token: write       # sign the provenance attestation
+      attestations: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Checksums
+        run: |
+          cd dist
+          sha256sum * > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: "dist/*"
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true
+          body: |
+            ## Install
+            Download **Tapedeck-…-x64-setup.exe** (most PCs) or **-arm64-setup.exe** (Snapdragon / ARM PCs) and run it. It installs just for you, with no admin prompt, and adds Tapedeck to the Start menu. Prefer no installer? Unzip the **portable** zip and run `Tapedeck.exe`.
+
+            Requires Windows 10 (2004) or later with the WebView2 runtime (built into Windows 11).
+
+            **"Windows protected your PC"?** Tapedeck isn't code-signed yet, so SmartScreen warns about new downloads. Choose **More info → Run anyway**, and only for files downloaded from this page.
+
+            ## Verify your download
+            Every file here was built by GitHub Actions straight from this repository's source:
+            - Compare the file's SHA-256 with `SHA256SUMS.txt`: in PowerShell, run `Get-FileHash .\Tapedeck-…-setup.exe`.
+            - Or verify the signed provenance: `gh attestation verify <file> --repo ${{ github.repository }}`

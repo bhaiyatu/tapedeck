@@ -21,6 +21,9 @@ public partial class App : Application
 
     public App()
     {
+        // Before any WebView2 exists: ignore environment overrides that could open a debugging port
+        // or swap the browser runtime / profile underneath the signed-in session.
+        WebViewHost.ScrubEnvironment();
         InitializeComponent();
         UnhandledException += (_, e) =>
         {
@@ -67,6 +70,21 @@ public partial class App : Application
             MediaControls?.Dispose();
         };
         _window.Activate();
+    }
+
+    /// <summary>Restarts the app (used when switching between the on-disk and in-memory profiles).</summary>
+    public static void Restart()
+    {
+        try
+        {
+            Microsoft.Windows.AppLifecycle.AppInstance.Restart("");
+        }
+        catch (Exception)
+        {
+            var exe = Environment.ProcessPath;
+            if (exe is not null) System.Diagnostics.Process.Start(exe);
+            Environment.Exit(0);
+        }
     }
 
     public static void LogError(Exception ex)

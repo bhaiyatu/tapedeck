@@ -20,14 +20,26 @@ public sealed partial class LibraryPage : Page
 
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
-        foreach (var item in Tabs.Items)
-            if ((string)item.Tag == _lastTab) item.IsSelected = true;
+        SyncTabs();
         _ = LoadAsync();
     }
 
     protected override void OnNavigatedFrom(NavigationEventArgs e) => _cts?.Cancel();
 
-    private string CurrentTab => (string?)Tabs.SelectedItem?.Tag ?? "FEmusic_liked_playlists";
+    private string CurrentTab => _lastTab;
+
+    private void SyncTabs()
+    {
+        foreach (var chip in Tabs.Children.OfType<Microsoft.UI.Xaml.Controls.Primitives.ToggleButton>())
+            chip.IsChecked = (string)chip.Tag == _lastTab;
+    }
+
+    private void OnTabClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { Tag: string tag }) _lastTab = tag;
+        SyncTabs();
+        _ = LoadAsync();
+    }
 
     private async Task LoadAsync()
     {
@@ -75,12 +87,6 @@ public sealed partial class LibraryPage : Page
         {
             if (!cts.IsCancellationRequested) LoadingRing.IsActive = false;
         }
-    }
-
-    private void OnTabChanged(SelectorBar sender, SelectorBarSelectionChangedEventArgs args)
-    {
-        _lastTab = CurrentTab;
-        _ = LoadAsync();
     }
 
     private void OnPlayAll(object sender, RoutedEventArgs e) =>

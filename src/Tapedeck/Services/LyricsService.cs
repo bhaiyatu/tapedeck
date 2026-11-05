@@ -29,13 +29,16 @@ public sealed partial class LyricsService
         if (track.VideoId is { } id && _cache.TryGetValue(id, out var cached)) return cached;
 
         Lyrics? result = null;
-        try
+        if (App.Settings.Current.UseLrclib)
         {
-            result = await FromLrclibAsync(track, durationSeconds, ct);
-        }
-        catch (Exception) when (!ct.IsCancellationRequested)
-        {
-            // Fall through to YouTube Music lyrics.
+            try
+            {
+                result = await FromLrclibAsync(track, durationSeconds, ct);
+            }
+            catch (Exception) when (!ct.IsCancellationRequested)
+            {
+                // Fall through to YouTube Music lyrics.
+            }
         }
 
         if (result is null && lyricsBrowseId is not null)

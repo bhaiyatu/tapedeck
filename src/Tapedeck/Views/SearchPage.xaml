@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Page
     x:Class="Tapedeck.Views.SearchPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -9,7 +9,7 @@
 
     <Grid>
         <ScrollViewer x:Name="Scroller" ViewChanged="OnScrollChanged">
-            <StackPanel Padding="36,20,36,36">
+            <StackPanel Padding="{StaticResource PagePadding}">
                 <TextBlock x:Name="TitleText" Style="{StaticResource PageTitleStyle}" />
 
                 <ScrollViewer Margin="0,0,0,24" HorizontalScrollMode="Enabled" HorizontalScrollBarVisibility="Hidden"

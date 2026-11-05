@@ -21,6 +21,8 @@
     <Version>0.1.0</Version>
     <Product>Tapedeck</Product>
     <Description>A native Windows client for YouTube Music</Description>
+    <!-- Pin every package (and transitive dependency) by content hash; CI restores with locked mode. -->
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
   </PropertyGroup>
 
   <ItemGroup>

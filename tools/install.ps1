@@ -1,17 +1,22 @@
 # Builds a Release copy of Tapedeck into %LOCALAPPDATA%\Programs\Tapedeck and adds a Start menu shortcut.
-#   .\tools\install.ps1             install / update
-#   .\tools\install.ps1 -Uninstall  remove the app and shortcut (your settings and sign-in stay in %LOCALAPPDATA%\Tapedeck)
-param([switch]$Uninstall)
+#   .\tools\install.ps1                    install / update
+#   .\tools\install.ps1 -Uninstall         remove the app and shortcut (keeps settings and sign-in)
+#   .\tools\install.ps1 -Uninstall -Purge  also delete %LOCALAPPDATA%\Tapedeck: settings, logs and the
+#                                          WebView2 profile holding your Google session
+param([switch]$Uninstall, [switch]$Purge)
 
 $ErrorActionPreference = "Stop"
 $dest = Join-Path $env:LOCALAPPDATA "Programs\Tapedeck"
+$data = Join-Path $env:LOCALAPPDATA "Tapedeck"
 $shortcut = Join-Path $env:APPDATA "Microsoft\Windows\Start Menu\Programs\Tapedeck.lnk"
 
 Get-Process Tapedeck -ErrorAction SilentlyContinue | Stop-Process -Force
+Start-Sleep -Milliseconds 500  # let WebView2 release the profile
 
 if ($Uninstall) {
     if (Test-Path $shortcut) { Remove-Item $shortcut }
     if (Test-Path $dest) { Remove-Item $dest -Recurse -Force }
+    if ($Purge -and (Test-Path $data)) { Remove-Item $data -Recurse -Force; Write-Output "Deleted $data (settings and sign-in)." }
     Write-Output "Tapedeck removed."
     return
 }

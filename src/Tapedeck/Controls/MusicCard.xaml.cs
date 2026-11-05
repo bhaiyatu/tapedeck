@@ -15,7 +15,11 @@ public sealed partial class MusicCard : UserControl
     public MusicCard()
     {
         InitializeComponent();
+        ArtHost.ScaleTransition = new Vector3Transition { Duration = TimeSpan.FromMilliseconds(180) };
     }
+
+    private void OnArtSizeChanged(object sender, SizeChangedEventArgs e) =>
+        ArtHost.CenterPoint = new System.Numerics.Vector3((float)e.NewSize.Width / 2, (float)e.NewSize.Height / 2, 0);
 
     public MusicItem? Item
     {
@@ -33,8 +37,8 @@ public sealed partial class MusicCard : UserControl
     {
         var item = Item;
         if (item is null) return;
-        CardWidth = item.IsWide ? 284 : 168;
-        ArtHeight = item.IsWide ? 160 : 168;
+        CardWidth = item.IsWide ? 288 : 172;
+        ArtHeight = item.IsWide ? 162 : 172;
         CanPlay = item.Kind is ItemKind.Artist or ItemKind.Mood ? Visibility.Collapsed : Visibility.Visible;
         TextAlign = item.IsRound ? Microsoft.UI.Xaml.TextAlignment.Center : Microsoft.UI.Xaml.TextAlignment.Left;
         TextAlignment = item.IsRound ? HorizontalAlignment.Center : HorizontalAlignment.Stretch;
@@ -45,9 +49,17 @@ public sealed partial class MusicCard : UserControl
     private void AutomationProperties_SetName(MusicItem item) =>
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(this, $"{item.Title}, {item.Subtitle}");
 
-    private void OnPointerEntered(object sender, PointerRoutedEventArgs e) => HoverOverlay.Opacity = 1;
+    private void OnPointerEntered(object sender, PointerRoutedEventArgs e)
+    {
+        HoverOverlay.Opacity = 1;
+        ArtHost.Scale = new System.Numerics.Vector3(1.03f, 1.03f, 1);
+    }
 
-    private void OnPointerExited(object sender, PointerRoutedEventArgs e) => HoverOverlay.Opacity = 0;
+    private void OnPointerExited(object sender, PointerRoutedEventArgs e)
+    {
+        HoverOverlay.Opacity = 0;
+        ArtHost.Scale = System.Numerics.Vector3.One;
+    }
 
     private void OnTapped(object sender, TappedRoutedEventArgs e)
     {

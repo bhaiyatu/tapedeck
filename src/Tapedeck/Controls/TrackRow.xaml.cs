@@ -105,13 +105,14 @@ public sealed partial class TrackRow : UserControl
             ? Item is not null && ReferenceEquals(Item, App.Player?.Current)
             : Item?.VideoId is { } id && App.Player?.Current?.VideoId == id;
         PlayingOverlay.Visibility = playing ? Visibility.Visible : Visibility.Collapsed;
-        if (playing) TitleText.Foreground = (Brush)Application.Current.Resources["AccentTextFillColorPrimaryBrush"];
+        // Clearing (rather than setting) the normal colour lets it follow light/dark theme changes.
+        if (playing) TitleText.Foreground = (Brush)Application.Current.Resources["BrandGradient"];
         else TitleText.ClearValue(TextBlock.ForegroundProperty);
     }
 
     private void OnPointerEntered(object sender, PointerRoutedEventArgs e)
     {
-        Root.Background = (Brush)Application.Current.Resources["SubtleFillColorSecondaryBrush"];
+        Root.Background = (Brush)Tapedeck.ResourceExtensions.ThemeLookup(Resources, "SubtleHover", this);
         MoreButton.Opacity = 1;
     }
 

@@ -3,7 +3,8 @@
 // asks YouTube Music's own web app to play one track at a time, reports playback state back,
 // and advances to the next track the app nominated when a track ends.
 (() => {
-    if (window.top !== window || window.__td) return;
+    // Only ever run in YouTube Music's own top-level page.
+    if (window.top !== window || window.__td || location.protocol !== 'https:' || location.hostname !== 'music.youtube.com') return;
 
     const post = (msg) => {
         try { window.chrome.webview.postMessage(msg); } catch (_) { /* not hosted */ }

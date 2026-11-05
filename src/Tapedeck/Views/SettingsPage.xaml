@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Page
     x:Class="Tapedeck.Views.SettingsPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -7,12 +7,11 @@
     Background="Transparent">
 
     <ScrollViewer>
-        <StackPanel Padding="36,20,36,36" Spacing="6" MaxWidth="860" HorizontalAlignment="Left">
+        <StackPanel Padding="{StaticResource PagePadding}" Spacing="6" MaxWidth="900" HorizontalAlignment="Left">
             <TextBlock Text="Settings" Style="{StaticResource PageTitleStyle}" />
 
             <TextBlock Text="Account" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,8,0,4" />
-            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                    BorderThickness="1" CornerRadius="8" Padding="16">
+            <Border Style="{StaticResource PanelBorderStyle}">
                 <Grid ColumnSpacing="16">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" />
@@ -34,9 +33,41 @@
                 </Grid>
             </Border>
 
+            <TextBlock Text="Privacy &amp; security" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,20,0,4" />
+            <Border Style="{StaticResource PanelBorderStyle}">
+                <StackPanel Spacing="14">
+                    <Grid ColumnSpacing="16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="Stay signed in on this PC" />
+                            <TextBlock TextWrapping="Wrap" Style="{StaticResource SecondaryTextStyle}"
+                                       Text="Off: your Google session lives only in memory and is gone when Tapedeck closes. Nothing about your sign-in is written to disk. Takes effect after a restart." />
+                        </StackPanel>
+                        <ToggleSwitch x:Name="StaySignedInSwitch" Grid.Column="1" OnContent="" OffContent="" Toggled="OnStaySignedInToggled" />
+                    </Grid>
+                    <Grid ColumnSpacing="16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="Synced lyrics from LRCLIB" />
+                            <TextBlock TextWrapping="Wrap" Style="{StaticResource SecondaryTextStyle}"
+                                       Text="Looks up the song's title and artist on lrclib.net. No account details are ever sent. Off: only YouTube Music's own lyrics are used." />
+                        </StackPanel>
+                        <ToggleSwitch x:Name="LrclibSwitch" Grid.Column="1" OnContent="" OffContent="" Toggled="OnLrclibToggled" />
+                    </Grid>
+                    <TextBlock TextWrapping="Wrap" Style="{StaticResource SecondaryTextStyle}">
+                        <Run Text="Tapedeck never sees or stores your password: you type it into Google's own page, in a window that always shows which site it is on. Your session is only ever sent to music.youtube.com over HTTPS. Signing out ends the session with Google and wipes all of its data from this PC." />
+                    </TextBlock>
+                </StackPanel>
+            </Border>
+
             <TextBlock Text="Appearance" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,20,0,4" />
-            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                    BorderThickness="1" CornerRadius="8" Padding="16">
+            <Border Style="{StaticResource PanelBorderStyle}">
                 <Grid ColumnSpacing="16">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
@@ -55,8 +86,7 @@
             </Border>
 
             <TextBlock Text="Keyboard shortcuts" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,20,0,4" />
-            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                    BorderThickness="1" CornerRadius="8" Padding="16">
+            <Border Style="{StaticResource PanelBorderStyle}">
                 <Grid ColumnSpacing="24" RowSpacing="6">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" />
@@ -66,9 +96,9 @@
                         <RowDefinition /><RowDefinition /><RowDefinition /><RowDefinition /><RowDefinition /><RowDefinition /><RowDefinition />
                     </Grid.RowDefinitions>
                     <TextBlock Text="Space" FontWeight="SemiBold" /><TextBlock Grid.Column="1" Text="Play / pause" />
-                    <TextBlock Grid.Row="1" Text="Ctrl + →  /  Ctrl + ←" FontWeight="SemiBold" /><TextBlock Grid.Row="1" Grid.Column="1" Text="Next / previous track" />
-                    <TextBlock Grid.Row="2" Text="Ctrl + ↑  /  Ctrl + ↓" FontWeight="SemiBold" /><TextBlock Grid.Row="2" Grid.Column="1" Text="Volume up / down" />
-                    <TextBlock Grid.Row="3" Text="Ctrl + F" FontWeight="SemiBold" /><TextBlock Grid.Row="3" Grid.Column="1" Text="Search" />
+                    <TextBlock Grid.Row="1" Text="Ctrl + &#x2192;  /  Ctrl + &#x2190;" FontWeight="SemiBold" /><TextBlock Grid.Row="1" Grid.Column="1" Text="Next / previous track" />
+                    <TextBlock Grid.Row="2" Text="Ctrl + &#x2191;  /  Ctrl + &#x2193;" FontWeight="SemiBold" /><TextBlock Grid.Row="2" Grid.Column="1" Text="Volume up / down" />
+                    <TextBlock Grid.Row="3" Text="Ctrl + K  /  Ctrl + F" FontWeight="SemiBold" /><TextBlock Grid.Row="3" Grid.Column="1" Text="Search" />
                     <TextBlock Grid.Row="4" Text="Ctrl + L" FontWeight="SemiBold" /><TextBlock Grid.Row="4" Grid.Column="1" Text="Like current song" />
                     <TextBlock Grid.Row="5" Text="Ctrl + S  /  Ctrl + R" FontWeight="SemiBold" /><TextBlock Grid.Row="5" Grid.Column="1" Text="Shuffle / repeat" />
                     <TextBlock Grid.Row="6" Text="Media keys" FontWeight="SemiBold" /><TextBlock Grid.Row="6" Grid.Column="1" Text="Work system-wide, including from the lock screen" />
@@ -76,22 +106,20 @@
             </Border>
 
             <TextBlock Text="Troubleshooting" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,20,0,4" />
-            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                    BorderThickness="1" CornerRadius="8" Padding="16">
+            <Border Style="{StaticResource PanelBorderStyle}">
                 <StackPanel Spacing="12">
                     <TextBlock TextWrapping="Wrap" Style="{StaticResource SecondaryTextStyle}"
                                Text="Audio plays through YouTube Music's own web player running hidden in the background. If playback gets stuck, reload it." />
                     <StackPanel Orientation="Horizontal" Spacing="8">
                         <Button Content="Reload player" Click="OnReloadPlayer" />
-                        <Button Content="Show player" Click="OnShowPlayer" />
+                        <Button x:Name="ShowPlayerButton" Content="Player DevTools (debug build)" Click="OnShowPlayer" Visibility="Collapsed" />
                         <Button Content="Open data folder" Click="OnOpenData" />
                     </StackPanel>
                 </StackPanel>
             </Border>
 
             <TextBlock Text="About" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,20,0,4" />
-            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                    BorderThickness="1" CornerRadius="8" Padding="16">
+            <Border Style="{StaticResource PanelBorderStyle}">
                 <StackPanel Spacing="6">
                     <TextBlock x:Name="VersionText" Style="{StaticResource BodyStrongTextBlockStyle}" />
                     <TextBlock TextWrapping="Wrap" Style="{StaticResource SecondaryTextStyle}"
