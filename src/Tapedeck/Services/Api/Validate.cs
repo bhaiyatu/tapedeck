@@ -14,7 +14,7 @@ public static partial class Validate
     [GeneratedRegex(@"^\d+\.\d{8}\.\d{2}\.\d{2}$")]
     private static partial Regex ClientVersionRegex();
 
-    [GeneratedRegex(@"^[A-Za-z0-9%_=-]{8,256}$")]
+    [GeneratedRegex(@"^[A-Za-z0-9%_=-]{8,1024}$")]
     private static partial Regex VisitorDataRegex();
 
     [GeneratedRegex(@"^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})?$")]

@@ -540,6 +540,13 @@ public sealed partial class PlayerService : ObservableObject
 
     private void OnBridgeState(object? sender, BridgeState s)
     {
+        // Signed in, YouTube Music restores your last track into the page on load. Until the user
+        // plays something here, that isn't "now playing": ignore it, and never let it start by itself.
+        if (Current is null)
+        {
+            if (s.Playing) _ = _bridge.PauseAsync();
+            return;
+        }
         IsAd = s.Ad;
         IsPlaying = s.Playing;
         IsBuffering = s.Buffering;

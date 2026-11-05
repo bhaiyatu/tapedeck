@@ -12,7 +12,7 @@
             <c:TrackRow Item="{x:Bind}" Number="{x:Bind Index}" ShowArt="False" HandlesTap="False" />
         </DataTemplate>
         <DataTemplate x:Key="PlaylistTrackTemplate" x:DataType="m:MusicItem">
-            <c:TrackRow Item="{x:Bind}" ShowAlbum="True" HandlesTap="False" />
+            <c:TrackRow Item="{x:Bind}" HandlesTap="False" />
         </DataTemplate>
         <SolidColorBrush x:Key="ListViewItemBackgroundPointerOver" Color="Transparent" />
         <SolidColorBrush x:Key="ListViewItemBackgroundPointerOverSelected" Color="Transparent" />

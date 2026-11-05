@@ -38,7 +38,11 @@ internal static partial class ItemParser
     {
         var list = new List<MusicItem>(items.Count);
         foreach (var it in items)
-            if (Parse(it) is { } m) list.Add(m);
+        {
+            // Skip tiles that lead nowhere we support (e.g. Library's "New playlist" button).
+            if (Parse(it) is { } m && (m.VideoId is not null || m.BrowseId is not null || m.PlayEndpoint is not null))
+                list.Add(m);
+        }
         return list;
     }
 

@@ -52,7 +52,7 @@
             </StackPanel>
         </StackPanel>
 
-        <TextBlock Grid.Column="3" Width="180" Margin="16,0,0,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+        <TextBlock Grid.Column="3" Width="180" Margin="16,0,0,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap" MaxLines="1"
                    Style="{StaticResource SecondaryTextStyle}"
                    Text="{x:Bind Item.Album.Name, Mode=OneWay, FallbackValue=''}"
                    Visibility="{x:Bind AlbumVisibility, Mode=OneWay}" />
