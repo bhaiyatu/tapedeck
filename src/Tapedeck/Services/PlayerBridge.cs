@@ -158,6 +158,7 @@ public sealed class PlayerBridge
     [System.Diagnostics.Conditional("DEBUG")]
     public static void DebugLog(string line)
     {
+#if DEBUG
         if (!DebugEnabled) return;
         try
         {
@@ -167,6 +168,7 @@ public sealed class PlayerBridge
         {
             // Diagnostics only.
         }
+#endif
     }
 
     public static string LoadScript(string name)

@@ -53,7 +53,8 @@ LicenseFile=..\LICENSE
 InfoBeforeFile=privacy-notice.txt
 ; Product name / version metadata on setup.exe (checked by SignPath before signing).
 VersionInfoProductName=Tapedeck
-VersionInfoProductVersion={#AppVersion}
+; Binary product version must be numeric; the text version may carry a "-ci.N" suffix.
+VersionInfoProductVersion={#NumericVersion}
 VersionInfoProductTextVersion={#AppVersion}
 VersionInfoVersion={#NumericVersion}
 VersionInfoDescription=Tapedeck installer
