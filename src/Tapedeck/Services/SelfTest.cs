@@ -85,10 +85,43 @@ public static class SelfTest
             var third = player.Queue[2];
             await WaitFor(() => player.Duration > 10, 5);
             player.Seek(player.Duration - 4);
-            Check(await WaitFor(() => player.Current == third && player.CurrentIndex == 2, 25),
+            // Signed out, YouTube Music may slot an ad (up to ~30s) between songs, so allow for one.
+            Check(await WaitFor(() => player.Current == third && player.CurrentIndex == 2, 90),
                 $"auto-advanced at end of track to {third.Title} (index={player.CurrentIndex})");
             Check(await WaitFor(() => player.IsPlaying && player.Position > 1 && !player.IsAd, 90),
                 $"auto-advanced track is playing (pos={player.Position:F1})");
+
+            // 3b. YouTube Music changes track by itself, with no 'ended' event (its crossfade does this
+            //     a few seconds before a song ends). Simulated by navigating the page behind the app's back.
+            //     Position > 1 on the expected track proves the page really plays it: reports for any
+            //     other track are ignored.
+            // Wait past the bridge's guard window: changes right after the app picks a song are treated
+            // as interference and undone; later ones (like crossfade near a song's end) are followed.
+            await Task.Delay(16000);
+            Check(player.CurrentIndex == 2 && player.IsPlaying, $"no extra skip after the natural end (still index {player.CurrentIndex})");
+            var before = player.CurrentIndex;
+            var ourNext = player.Queue[before + 1];
+            await App.Bridge.EvalAsync(PageNavigateScript(ourNext.VideoId!));
+            Check(await WaitFor(() => player.Current == ourNext && player.CurrentIndex == before + 1 && player.IsPlaying && player.Position > 1 && !player.IsAd, 60),
+                $"page moved to our next song by itself: app followed to {ourNext.Title} (index={player.CurrentIndex}, pos={player.Position:F1})");
+
+            await Task.Delay(16000);
+            before = player.CurrentIndex;
+            ourNext = player.Queue[before + 1];
+            var stray = new[] { "dQw4w9WgXcQ", "kJQP7kiw5Fk", "9bZkp7q19f0" }.First(id => player.Queue.All(q => q.VideoId != id));
+            await App.Bridge.EvalAsync(PageNavigateScript(stray));
+            Check(await WaitFor(() => player.Current == ourNext && player.CurrentIndex == before + 1 && player.IsPlaying && player.Position > 1 && !player.IsAd, 60),
+                $"page wandered to an unrelated song: app switched to its own next, {ourNext.Title} (index={player.CurrentIndex}, pos={player.Position:F1})");
+
+            // (iii) Something else taking over right after the app picked a song is undone.
+            await Task.Delay(6000);
+            before = player.CurrentIndex;
+            var chosen = player.Current;
+            var stray2 = new[] { "9bZkp7q19f0", "kJQP7kiw5Fk", "dQw4w9WgXcQ" }.First(id => id != stray && player.Queue.All(q => q.VideoId != id));
+            await App.Bridge.EvalAsync(PageNavigateScript(stray2));
+            await Task.Delay(4000);
+            Check(await WaitFor(() => player.Current == chosen && player.CurrentIndex == before && player.IsPlaying && player.Position > 1 && !player.IsAd, 30),
+                $"interference right after a switch was undone: still {chosen?.Title} (index={player.CurrentIndex}, pos={player.Position:F1})");
 
             // 4. Pause / resume.
             player.Pause();
@@ -133,6 +166,12 @@ public static class SelfTest
             Environment.Exit(_failures == 0 ? 0 : 1);
         }
     }
+
+    /// <summary>Makes YouTube Music's page switch tracks on its own, bypassing the bridge.</summary>
+    private static string PageNavigateScript(string videoId) =>
+        "(() => { const a = document.querySelector('ytmusic-app'); " +
+        "a.dispatchEvent(new CustomEvent('yt-navigate', { bubbles: true, composed: true, " +
+        $"detail: {{ endpoint: {{ watchEndpoint: {{ videoId: '{videoId}' }} }} }} }})); return 'ok'; }})()";
 
     private static async Task<bool> WaitFor(Func<bool> condition, int seconds)
     {

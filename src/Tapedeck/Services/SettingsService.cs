@@ -38,6 +38,10 @@ internal sealed partial class SettingsJsonContext : JsonSerializerContext;
 public sealed class SettingsService
 {
     public static string DataFolder { get; } =
+#if DEBUG
+        // Debug builds can run against a separate profile (e.g. for tests) without touching your sign-in.
+        Environment.GetEnvironmentVariable("TAPEDECK_DATA_DIR") is { Length: > 0 } dir ? dir :
+#endif
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Tapedeck");
 
     private static string FilePath => Path.Combine(DataFolder, "settings.json");

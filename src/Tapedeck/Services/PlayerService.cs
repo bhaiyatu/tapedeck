@@ -261,6 +261,8 @@ public sealed partial class PlayerService : ObservableObject
         Position = 0;
         Duration = item.DurationSeconds;
         IsBuffering = true;
+        _lastLoadAt = DateTime.UtcNow;
+        _mismatchVideoId = null;
         _ = _bridge.LoadAsync(item.VideoId!, NextVideoId());
         _ = LoadMoreIfNeededAsync();
     }
@@ -551,26 +553,52 @@ public sealed partial class PlayerService : ObservableObject
         IsPlaying = s.Playing;
         IsBuffering = s.Buffering;
         if (s.Ad) return;
-        if (Current is not null && s.VideoId is not null && s.VideoId != Current.VideoId) return; // stale report from the previous track
+
+        if (s.VideoId is not null && s.VideoId != Current.VideoId)
+        {
+            // Right after a switch the page can still report the previous track; ignore that.
+            // But if it keeps playing something else, the app has lost track of it (e.g. a page that
+            // moved on without telling us): follow what is actually playing rather than freeze.
+            var now = DateTime.UtcNow;
+            if (_mismatchVideoId != s.VideoId)
+            {
+                _mismatchVideoId = s.VideoId;
+                _mismatchSince = now;
+            }
+            if (now - _lastLoadAt > TimeSpan.FromSeconds(6) && now - _mismatchSince > TimeSpan.FromSeconds(3))
+            {
+                _mismatchVideoId = null;
+                OnBridgeAdvanced(this, s.VideoId);
+            }
+            return;
+        }
+
+        _mismatchVideoId = null;
         Position = s.Position;
         if (s.Duration > 0) Duration = s.Duration;
     }
 
+    private string? _mismatchVideoId;
+    private DateTime _mismatchSince;
+    private DateTime _lastLoadAt;
+
     private void OnBridgeAdvanced(object? sender, string videoId)
     {
-        // The page moved on by itself at the end of a track.
+        // The page moved on by itself (end of a track, or YouTube Music's crossfade).
+        if (Current?.VideoId == videoId) return;
         var idx = -1;
         if (CurrentIndex + 1 < Queue.Count && Queue[CurrentIndex + 1].VideoId == videoId) idx = CurrentIndex + 1;
         else if (Repeat == RepeatMode.All && Queue.Count > 0 && Queue[0].VideoId == videoId && CurrentIndex == Queue.Count - 1) idx = 0;
         else idx = Queue.ToList().FindIndex(q => q.VideoId == videoId);
 
+        MusicItem? stranger = null;
         if (idx < 0)
         {
-            // Not ours (e.g. YouTube Music insisted on something else). Show it rather than lie.
-            var stranger = new MusicItem { Kind = ItemKind.Song, VideoId = videoId, Title = "Now playing" };
-            idx = CurrentIndex + 1;
+            // Not in our queue: show it right after the current track, then fill in its details.
+            stranger = new MusicItem { Kind = ItemKind.Song, VideoId = videoId, Title = "Loading…" };
+            idx = Math.Min(CurrentIndex + 1, Queue.Count);
             _suppressQueueSync = true;
-            Queue.Insert(Math.Min(idx, Queue.Count), stranger);
+            Queue.Insert(idx, stranger);
             _suppressQueueSync = false;
         }
 
@@ -578,8 +606,39 @@ public sealed partial class PlayerService : ObservableObject
         SetCurrent(Queue[idx]);
         Position = 0;
         Duration = Queue[idx].DurationSeconds;
+        _lastLoadAt = DateTime.UtcNow;
         _ = SyncNextAsync();
         _ = LoadMoreIfNeededAsync();
+        if (stranger is not null) _ = DescribeStrangerAsync(stranger);
+    }
+
+    /// <summary>Replaces a placeholder queue entry with the real track details.</summary>
+    private async Task DescribeStrangerAsync(MusicItem placeholder)
+    {
+        try
+        {
+            var info = await _api.GetWatchInfoAsync(placeholder.VideoId!);
+            if (info.Track is not { } track) return;
+            var i = Queue.IndexOf(placeholder);
+            if (i < 0) return;
+            _suppressQueueSync = true;
+            Queue[i] = track;
+            _suppressQueueSync = false;
+            if (ReferenceEquals(Current, placeholder))
+            {
+                CurrentIndex = i;
+                SetCurrent(track);
+                if (Duration <= 0) Duration = track.DurationSeconds;
+            }
+        }
+        catch (Exception)
+        {
+            // Keep the placeholder; playback is unaffected.
+        }
+        finally
+        {
+            _suppressQueueSync = false;
+        }
     }
 
     private async void OnBridgeError(object? sender, string message)
