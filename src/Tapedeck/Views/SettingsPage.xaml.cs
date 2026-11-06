@@ -2,7 +2,10 @@ using System.ComponentModel;
 using System.Reflection;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media;
 using Tapedeck.Services;
+using Tapedeck.Services.Discord;
+using Windows.UI;
 
 namespace Tapedeck.Views;
 
@@ -18,14 +21,23 @@ public sealed partial class SettingsPage : Page
             if ((string)item.Tag == App.Settings.Current.Theme) ThemeBox.SelectedItem = item;
         StaySignedInSwitch.IsOn = App.Settings.Current.StaySignedIn;
         LrclibSwitch.IsOn = App.Settings.Current.UseLrclib;
+        DiscordSwitch.IsOn = App.Settings.Current.DiscordPresence;
+        foreach (ComboBoxItem item in DiscordStatusBox.Items)
+            if ((string)item.Tag == App.Settings.Current.DiscordStatus.ToString()) DiscordStatusBox.SelectedItem = item;
 #if DEBUG
         ShowPlayerButton.Visibility = Visibility.Visible;
 #endif
         _initializing = false;
 
         UpdateAccount();
+        UpdateDiscord();
         Auth.PropertyChanged += OnAuthChanged;
-        Unloaded += (_, _) => Auth.PropertyChanged -= OnAuthChanged;
+        App.Discord.PropertyChanged += OnDiscordChanged;
+        Unloaded += (_, _) =>
+        {
+            Auth.PropertyChanged -= OnAuthChanged;
+            App.Discord.PropertyChanged -= OnDiscordChanged;
+        };
     }
 
     public AuthService Auth => App.Auth;
@@ -102,6 +114,57 @@ public sealed partial class SettingsPage : Page
         if (_initializing) return;
         App.Settings.Current.UseLrclib = LrclibSwitch.IsOn;
         App.Settings.Save();
+    }
+
+    private void OnDiscordToggled(object sender, RoutedEventArgs e)
+    {
+        if (_initializing) return;
+        App.Settings.Current.DiscordPresence = DiscordSwitch.IsOn;
+        App.Settings.Save();
+        App.Discord.SettingsChanged();
+        UpdateDiscord();
+    }
+
+    private void OnDiscordStatusChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_initializing || DiscordStatusBox.SelectedItem is not ComboBoxItem { Tag: string tag }
+            || !Enum.TryParse<DiscordStatusDisplay>(tag, out var display)) return;
+        App.Settings.Current.DiscordStatus = display;
+        App.Settings.Save();
+        App.Discord.SettingsChanged();
+    }
+
+    private void OnDiscordChanged(object? sender, PropertyChangedEventArgs e) => UpdateDiscord();
+
+    // Discord's own status colours.
+    private static readonly Color Online = Color.FromArgb(255, 35, 165, 90);
+    private static readonly Color Idle = Color.FromArgb(255, 240, 178, 50);
+    private static readonly Color Problem = Color.FromArgb(255, 242, 63, 67);
+
+    private void UpdateDiscord()
+    {
+        var discord = App.Discord;
+        var on = App.Settings.Current.DiscordPresence;
+        DiscordStatusRow.Opacity = on ? 1 : 0.5;
+        DiscordStatusBox.IsEnabled = on;
+        // While the switch was just flipped the service hasn't caught up yet; describe what is about to happen.
+        var state = on && discord.Connection == DiscordConnection.Off ? DiscordConnection.Waiting : discord.Connection;
+        if (!on) state = DiscordConnection.Off;
+
+        (Color? Dot, string Text) look = state switch
+        {
+            DiscordConnection.Connected when discord.LastError is { } error =>
+                (Problem, $"Discord didn't accept the last update: {error}"),
+            DiscordConnection.Connected =>
+                (Online, discord.UserName is { } name ? $"Connected to Discord as {name}" : "Connected to Discord"),
+            DiscordConnection.Waiting => (Idle, "Waiting for Discord. Open the Discord app on this PC and it connects by itself."),
+            DiscordConnection.NotConfigured => (Idle, "Discord sharing isn't set up in this build yet."),
+            DiscordConnection.Error => (Problem, $"Couldn't connect to Discord: {discord.LastError}. Trying again shortly."),
+            _ => (null, "Off. Nothing is sent to Discord."),
+        };
+        DiscordDot.Visibility = look.Dot is null ? Visibility.Collapsed : Visibility.Visible;
+        if (look.Dot is { } c) DiscordDot.Fill = new SolidColorBrush(c);
+        DiscordStateText.Text = look.Text;
     }
 
     private void OnReloadPlayer(object sender, RoutedEventArgs e) => App.Bridge.Reload();

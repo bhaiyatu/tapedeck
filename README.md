@@ -18,6 +18,7 @@ web player running hidden in the background.
 - **Lyrics:** time-synced lyrics from [LRCLIB](https://lrclib.net) that follow the song (click a line to seek), falling back to YouTube Music's own lyrics
 - **Design:** Kaset's layout (a sectioned sidebar with your account pinned at the bottom, and a floating glass player), on a clean near-black canvas or light theme with a rose-to-fuchsia accent
 - **Windows integration:** media keys, the volume-flyout and lock-screen media controls, light/dark themes
+- **Discord status** (opt-in): "Listening to Tapedeck" on your profile, with the album art, song, artist and album, a live progress bar, and a "Play on YouTube Music" button. The song and artist lines link to YouTube Music. It's hidden while paused and during ads, and you choose whether the member list shows the app, the song or the artist. Discord only shows it when **Share my activity** is on in Discord's Activity Privacy settings
 - **Keyboard:** Space play/pause, Ctrl+←/→ previous/next, Ctrl+↑/↓ volume, Ctrl+K or Ctrl+F search, Ctrl+L like, Ctrl+S shuffle, Ctrl+R repeat
 - **Google sign-in** for your personal recommendations and library. YouTube Music Premium plays without ads, just as on the web.
 
@@ -33,6 +34,7 @@ Signing in is the riskiest thing a client like this does, so the design keeps Ta
 - **Stored session.** By default the Google session stays on this PC, in the WebView2 profile under `%LOCALAPPDATA%\Tapedeck`, encrypted with your Windows account (DPAPI). As with any browser, other programs running as you can read it. Turn off **Settings → Stay signed in on this PC** to keep the session in memory only, gone when the app closes.
 - **Signing out** ends the session with Google first, then wipes every cookie and all site data from the profile. `install.ps1 -Uninstall -Purge` deletes everything.
 - **Lyrics** come from LRCLIB, which receives the song's title and artist only. You can turn it off in Settings.
+- **Discord status is off until you turn it on.** It then gives the Discord app on your PC only what the card shows (song, artist, album, artwork and YouTube Music links), over Discord's local connection. It never sends anything about your Google account and only shows the playing track.
 - Dependencies are pinned with a NuGet lock file (`packages.lock.json`).
 
 ## Download
@@ -83,12 +85,14 @@ dotnet build src\Tapedeck -p:Platform=x64
 | `Services/AuthService.cs`, `Views/LoginWindow.xaml` | Google sign-in happens in a WebView2 that shares the player's profile, so one session serves both playback and the API. |
 | `Services/MediaControlsService.cs` | Publishes the current track to Windows' System Media Transport Controls. |
 | `Services/LyricsService.cs` | LRCLIB synced lyrics, with YouTube Music lyrics as the fallback. |
+| `Services/DiscordPresenceService.cs`, `Services/Discord/` | Discord Rich Presence over the Discord app's local pipe (`\\.\pipe\discord-ipc-N`): a "Listening" activity with start/end times for the progress bar. Updates are coalesced and kept within Discord's rate limit of 5 per 20 seconds. |
 
 Data lives in `%LOCALAPPDATA%\Tapedeck`: `settings.json`, the `WebView2` profile (your Google session), and `errors.log`.
 
 ## Developer tools
 
 - **API probe:** `dotnet run --project tools\ApiProbe -- all` runs the real client and parsers against live YouTube Music and checks the results. Also takes `home`, `explore`, `search <q>`, `album <id>`, `artist <id>`, `queue <videoId>` or `lyrics <videoId>`. Run it first when YouTube changes something.
+- **Discord check:** `dotnet run --project tools\ApiProbe -- discord [videoId] [seconds]` checks the Rich Presence payload. Then it sends a real card to the Discord app on this PC and holds it on your profile for the given number of seconds.
 - **Playback self-test:** `Tapedeck.exe --selftest` plays real tracks with the sound muted and checks play, next, auto-advance at the end of a track, pause/resume, previous and album playback. It writes `%LOCALAPPDATA%\Tapedeck\selftest.log` and exits with 0 on pass.
 - **Debug mode** (Debug builds only, compiled out of Release): set `TAPEDECK_DEBUG=1` before launching to log bridge traffic to `bridge.log`, and to enable two file channels:
   - `tools\player-eval.ps1 -Code "…"` runs JavaScript inside the hidden player page.
@@ -108,7 +112,7 @@ Every release file is built by this repository's GitHub Actions workflow (`.gith
 - Compare its SHA-256 with the release's `SHA256SUMS.txt`: in PowerShell, `Get-FileHash .\Tapedeck-…-setup.exe`.
 - Or verify its build-provenance attestation with the GitHub CLI: `gh attestation verify <file> --repo bhaiyatu/tapedeck`.
 
-**Privacy:** Tapedeck connects to YouTube Music / Google to do what you ask (browse, play, sign in), and to LRCLIB only while the Lyrics panel is open (you can turn that off). It has no servers or analytics of its own. Details are in the [privacy policy](PRIVACY.md).
+**Privacy:** Tapedeck connects to YouTube Music / Google to do what you ask (browse, play, sign in), to LRCLIB only while the Lyrics panel is open (you can turn that off), and to the Discord app on your PC only if you turn on Discord status. It has no servers or analytics of its own. Details are in the [privacy policy](PRIVACY.md).
 
 ## License
 

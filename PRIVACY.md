@@ -10,6 +10,7 @@ Tapedeck only talks to other systems to do what you ask of it:
 |---|---|---|
 | **YouTube Music / Google** (`music.youtube.com`, `accounts.google.com` and Google's image servers) | While the app runs: browsing, searching, playing music, and signing in if you choose to | The same requests the YouTube Music website makes. When you are signed in, these carry your Google session. Google's own [privacy policy](https://policies.google.com/privacy) applies. |
 | **LRCLIB** (`lrclib.net`) | Only while the Lyrics panel is open | The current song's title, artist, album and length, to find time-synced lyrics. No account details. You can turn this off in **Settings → Privacy & security → Synced lyrics from LRCLIB**. |
+| **Discord** (the Discord app on your PC) | Only if you turn on **Settings → Discord → Show what you're listening to**, and only while music plays | The current song's title, artist, album, artwork link, length and position, and links to it on YouTube Music. Tapedeck hands these to the Discord app running on your PC (over its local connection, not the internet). Discord then shows them on your profile to the people who can see your activity, under Discord's own [privacy policy](https://discord.com/privacy). Nothing about your Google account is ever sent. Off by default. |
 
 Tapedeck also hands the current song's title, artist and artwork to Windows, for the media controls in the volume flyout and on the lock screen.
 

@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Tapedeck.Services.Discord;
 
 namespace Tapedeck.Services;
 
@@ -26,6 +27,13 @@ public sealed class AppSettings
 
     /// <summary>Look up synced lyrics on lrclib.net (sends the track's title/artist, nothing else).</summary>
     public bool UseLrclib { get; set; } = true;
+
+    /// <summary>Show the playing track on your Discord profile. Off until you turn it on.</summary>
+    public bool DiscordPresence { get; set; }
+
+    /// <summary>What the Discord member list shows next to your name.</summary>
+    public DiscordStatusDisplay DiscordStatus { get; set; } = DiscordStatusDisplay.App;
+
     public int WindowWidth { get; set; } = 1320;
     public int WindowHeight { get; set; } = 860;
 }

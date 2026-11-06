@@ -82,3 +82,22 @@ for ($i = 0; $i -lt $sizes.Count; $i++) {
 foreach ($png in $pngs) { $bw.Write($png) }
 $bw.Close()
 Write-Output "Wrote icon to $OutDir"
+
+# Discord: the app icon and the small badge on the Rich Presence card. Both are uploaded in the
+# Developer Portal (the badge as the art asset "tapedeck"). A solid square, since Discord rounds or circles it.
+$discordDir = Join-Path $PSScriptRoot "..\assets\discord"
+New-Item -ItemType Directory -Force $discordDir | Out-Null
+$badgeSize = 1024
+$badge = New-Object System.Drawing.Bitmap $badgeSize, $badgeSize, ([System.Drawing.Imaging.PixelFormat]::Format32bppArgb)
+$bg = [System.Drawing.Graphics]::FromImage($badge)
+$bg.SmoothingMode = [System.Drawing.Drawing2D.SmoothingMode]::AntiAlias
+$bg.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
+$bg.Clear([System.Drawing.Color]::FromArgb(255, 28, 22, 36))
+$cassette = Render ([int]($badgeSize * 0.8))
+$inset = ($badgeSize - $cassette.Width) / 2
+$bg.DrawImage($cassette, [float]$inset, [float]$inset, [float]$cassette.Width, [float]$cassette.Height)
+$bg.Dispose()
+$cassette.Dispose()
+$badge.Save((Join-Path $discordDir "tapedeck.png"), [System.Drawing.Imaging.ImageFormat]::Png)
+$badge.Dispose()
+Write-Output "Wrote Discord badge to $discordDir"

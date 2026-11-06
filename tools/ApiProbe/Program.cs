@@ -1,6 +1,8 @@
-// Usage: dotnet run -- [home|explore|search <q>|album <id>|playlist <id>|artist <id>|queue <videoId>|lyrics <videoId>|all]
+// Usage: dotnet run -- [home|explore|search <q>|album <id>|playlist <id>|artist <id>|queue <videoId>|lyrics <videoId>|discord [videoId] [seconds]|all]
+using System.Text.Json.Nodes;
 using Tapedeck.Models;
 using Tapedeck.Services.Api;
+using Tapedeck.Services.Discord;
 
 var api = new InnerTubeClient();
 var cmd = args.Length > 0 ? args[0] : "all";
@@ -161,11 +163,105 @@ void Hosts()
         Check(!Tapedeck.Services.GoogleDomains.IsAccountsHost(h), $"look-alike rejected: {h}");
 }
 
+void DiscordOffline()
+{
+    Console.WriteLine("== DISCORD ACTIVITY (offline)");
+    Check(DiscordActivity.Field("A") is { Length: 2 } a && a[0] == 'A', "one-character text is padded to Discord's 2-character minimum");
+    Check(DiscordActivity.Field(new string('x', 300)).Length <= 128, "long text is cut to 128 characters");
+    var cut = DiscordActivity.Field(string.Concat(Enumerable.Repeat("\U0001F3B5", 100)));
+    Check(cut.Length <= 128 && !char.IsHighSurrogate(cut[^2]), "cutting never splits an emoji in half");
+    Check(DiscordActivity.FromItem(new MusicItem { Title = "x", VideoId = "not a video id" }, 100) is null, "invalid video id is not shared");
+    Check(DiscordActivity.FromItem(new MusicItem { Title = " ", VideoId = "dQw4w9WgXcQ" }, 100) is null, "track without a title is not shared");
+
+    var channel = "UC" + new string('A', 22);
+    var item = new MusicItem
+    {
+        Title = "Line one\nline\ttwo",
+        VideoId = "dQw4w9WgXcQ",
+        Artists = [new Link("Some Artist", channel), new Link("Guest", null)],
+        Album = new Link("An Album", "MPREb_abcdefghijk"),
+        ThumbnailUrl = "https://lh3.googleusercontent.com/abc=w60-h60-l90-rj",
+    };
+    var track = DiscordActivity.FromItem(item, 212.6)!;
+    Check(track.Title == "Line one line two", $"titles are flattened to one line ({track.Title})");
+    Check(track.Artist == "Some Artist, Guest" && track.ArtistId == channel, "artists joined, first channel linked");
+    Check(track.ArtUrl == "https://lh3.googleusercontent.com/abc=w512-h512-l90-rj", $"artwork asked for at 512px ({track.ArtUrl})");
+    var start = DateTimeOffset.FromUnixTimeMilliseconds(1_800_000_000_000);
+    var act = DiscordActivity.Build(track, start, DiscordStatusDisplay.Song);
+    Console.WriteLine("  " + act.ToJsonString());
+    Check((int)act["type"]! == 2, "type is Listening");
+    Check((int)act["status_display_type"]! == 2, "status shows the song");
+    Check((long)act["timestamps"]!["end"]! - (long)act["timestamps"]!["start"]! == 213_000, "progress bar spans the track length");
+    Check((string?)act["state_url"] == "https://music.youtube.com/channel/" + channel, "artist line links to the artist");
+    Check((string?)act["assets"]!["large_url"] == "https://music.youtube.com/browse/MPREb_abcdefghijk", "artwork links to the album");
+    var buttons = act["buttons"]!.AsArray();
+    Check(buttons.Count == 2 && buttons.All(b => ((string)b!["label"]!).Length <= 32 && ((string)b["url"]!).StartsWith("https://")), "two buttons within Discord's limits");
+
+    var lone = DiscordActivity.FromItem(new MusicItem { Title = "Untitled", VideoId = "dQw4w9WgXcQ" }, 0)!;
+    var loneAct = DiscordActivity.Build(lone, start, DiscordStatusDisplay.Artist);
+    Check((int)loneAct["status_display_type"]! == 0, "status falls back to the app name when there is no artist");
+    Check(loneAct["timestamps"]!["end"] is null, "no end time (so no bar) when the length is unknown");
+    Check(DiscordActivity.ArtworkUrl("https://evil.example/x.png", "dQw4w9WgXcQ") == "https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg", "artwork from other hosts is replaced");
+    Check(DiscordActivity.ArtworkUrl("https://lh3.googleusercontent.com/" + new string('a', 300), "dQw4w9WgXcQ")!.StartsWith("https://i.ytimg.com/"), "over-long artwork URLs are replaced");
+}
+
+// Sends a real card to the Discord app on this PC (needs TAPEDECK_DISCORD_APP_ID or the built-in id).
+async Task DiscordLive(string videoId, int seconds)
+{
+    Console.WriteLine($"== DISCORD LIVE ({videoId})");
+    var info = await api.GetWatchInfoAsync(videoId);
+    Check(info.Track is not null, "watch info has the track");
+    if (info.Track is null) return;
+    var track = DiscordActivity.FromItem(info.Track, info.Track.DurationSeconds);
+    Check(track is not null, $"track can be shared: {track}");
+    if (track is null) return;
+    var activity = DiscordActivity.Build(track, DateTimeOffset.UtcNow, DiscordStatusDisplay.App);
+    Console.WriteLine("  " + activity.ToJsonString());
+
+    var appId = Environment.GetEnvironmentVariable("TAPEDECK_DISCORD_APP_ID") is { Length: > 0 } id ? id : DiscordActivity.ApplicationId;
+    if (appId.Length == 0)
+    {
+        Console.WriteLine("  (no Discord application id: set TAPEDECK_DISCORD_APP_ID to send it to Discord)");
+        return;
+    }
+    await using var client = new DiscordIpcClient();
+    var replies = new List<JsonNode>();
+    var gotReply = new TaskCompletionSource();
+    client.Reply += r => { replies.Add(r); gotReply.TrySetResult(); };
+    try
+    {
+        await client.ConnectAsync(appId, CancellationToken.None);
+    }
+    catch (Exception ex)
+    {
+        Check(false, $"connect to Discord: {ex.GetType().Name}: {ex.Message}");
+        return;
+    }
+    Check(client.IsConnected, $"connected to Discord as {client.UserName}");
+    await client.SetActivityAsync(activity, CancellationToken.None);
+    await Task.WhenAny(gotReply.Task, Task.Delay(5000));
+    var reply = replies.FirstOrDefault();
+    Console.WriteLine($"  reply: {reply?.ToJsonString()}");
+    Check(reply is not null && (string?)reply["evt"] != "ERROR", "Discord accepted the activity");
+    if (seconds > 0)
+    {
+        Console.WriteLine($"  showing it on your profile for {seconds}s…");
+        await Task.Delay(TimeSpan.FromSeconds(seconds));
+    }
+    await client.SetActivityAsync(null, CancellationToken.None);
+    await Task.Delay(500);
+}
+
 try
 {
     switch (cmd)
     {
         case "hosts": Hosts(); break;
+        case "discord":
+            DiscordOffline();
+            var dargs = (arg ?? "").Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            await DiscordLive(dargs.ElementAtOrDefault(0) ?? "kJQP7kiw5Fk", int.TryParse(dargs.ElementAtOrDefault(1), out var secs) ? secs : 0);
+            break;
         case "home": await Home(); break;
         case "explore": await Explore(); break;
         case "search": await Search(arg ?? "daft punk"); break;
@@ -175,6 +271,7 @@ try
         case "lyrics": await LyricsFor(arg!); break;
         default:
             Hosts();
+            DiscordOffline();
             await Home();
             await Explore();
             var r = await Search("daft punk");

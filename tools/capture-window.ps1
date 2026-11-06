@@ -1,8 +1,9 @@
 # Captures a process's main window to a PNG using PrintWindow (works for WinUI / DirectComposition content).
 param(
-    [Parameter(Mandatory)][string]$ProcessName,
+    [string]$ProcessName,
     [Parameter(Mandatory)][string]$OutFile,
-    [string]$Title  # optional: capture a secondary window of the process by its exact title
+    [string]$Title,  # optional: capture a secondary window of the process by its exact title
+    [int]$ProcessId  # optional: a specific process, e.g. a debug build running next to the installed app
 )
 
 Add-Type -AssemblyName System.Drawing
@@ -18,7 +19,7 @@ public static class Win32Capture {
 "@
 [Win32Capture]::SetProcessDPIAware() | Out-Null
 
-$proc = Get-Process -Name $ProcessName -ErrorAction Stop | Where-Object { $_.MainWindowHandle -ne 0 } | Select-Object -First 1
+$proc = if ($ProcessId) { Get-Process -Id $ProcessId -ErrorAction Stop } else { Get-Process -Name $ProcessName -ErrorAction Stop | Where-Object { $_.MainWindowHandle -ne 0 } | Select-Object -First 1 }
 if (-not $proc) { throw "No window found for $ProcessName" }
 $hwnd = $proc.MainWindowHandle
 if ($Title) {

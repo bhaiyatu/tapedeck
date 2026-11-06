@@ -13,6 +13,10 @@ To do what you ask, it connects to:
     time-synced lyrics. It receives the song's title, artist, album and
     length, never account details. You can turn this off in Settings.
 
+  - Discord, only if you turn on Discord status in Settings (it is off by
+    default). The Discord app on your PC then shows the song you're playing,
+    its artist, album and artwork on your profile. No account details.
+
 Tapedeck never sees your Google password. You type it into Google's own page.
 Your sign-in session is kept on this PC, encrypted with your Windows account.
 You can choose not to stay signed in. Uninstalling offers to delete it.

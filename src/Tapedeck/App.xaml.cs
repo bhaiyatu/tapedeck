@@ -16,6 +16,7 @@ public partial class App : Application
     public static PlayerService Player { get; private set; } = null!;
     public static LyricsService Lyrics { get; private set; } = null!;
     public static MediaControlsService? MediaControls { get; private set; }
+    public static DiscordPresenceService Discord { get; private set; } = null!;
     public static DispatcherQueue Dispatcher { get; private set; } = null!;
     public static MainWindow MainWindow { get; private set; } = null!;
 
@@ -44,6 +45,7 @@ public partial class App : Application
         Api.CookieProvider = Auth.GetCookieHeaderAsync;
         Player = new PlayerService(Bridge, Api, Settings);
         Lyrics = new LyricsService(Api);
+        Discord = new DiscordPresenceService(Player, Settings, Dispatcher);
 
         Bridge.Ready += (_, ready) =>
         {
@@ -68,6 +70,7 @@ public partial class App : Application
         {
             Settings.SaveNow();
             MediaControls?.Dispose();
+            Discord.Dispose();
         };
         _window.Activate();
     }

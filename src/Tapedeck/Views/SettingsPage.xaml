@@ -66,6 +66,44 @@
                 </StackPanel>
             </Border>
 
+            <TextBlock Text="Discord" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,20,0,4" />
+            <Border Style="{StaticResource PanelBorderStyle}">
+                <StackPanel Spacing="14">
+                    <Grid ColumnSpacing="16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="Show what you're listening to" />
+                            <TextBlock TextWrapping="Wrap" Style="{StaticResource SecondaryTextStyle}"
+                                       Text="Your Discord profile shows the song, artist, album art and a live progress bar, with a button to play it on YouTube Music. Hidden while paused. Needs the Discord app open on this PC, with Share my activity turned on in Discord's Activity Privacy settings." />
+                        </StackPanel>
+                        <ToggleSwitch x:Name="DiscordSwitch" Grid.Column="1" OnContent="" OffContent="" Toggled="OnDiscordToggled" />
+                    </Grid>
+                    <Grid x:Name="DiscordStatusRow" ColumnSpacing="16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="Status under your name" />
+                            <TextBlock TextWrapping="Wrap" Style="{StaticResource SecondaryTextStyle}"
+                                       Text="What the member list and friends list show after &#x201C;Listening to&#x201D;." />
+                        </StackPanel>
+                        <ComboBox x:Name="DiscordStatusBox" Grid.Column="1" MinWidth="160" SelectionChanged="OnDiscordStatusChanged">
+                            <ComboBoxItem Content="Tapedeck" Tag="App" />
+                            <ComboBoxItem Content="Song name" Tag="Song" />
+                            <ComboBoxItem Content="Artist name" Tag="Artist" />
+                        </ComboBox>
+                    </Grid>
+                    <StackPanel x:Name="DiscordStateRow" Orientation="Horizontal" Spacing="10">
+                        <Ellipse x:Name="DiscordDot" Width="8" Height="8" VerticalAlignment="Center" />
+                        <TextBlock x:Name="DiscordStateText" Style="{StaticResource SecondaryTextStyle}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
             <TextBlock Text="Appearance" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,20,0,4" />
             <Border Style="{StaticResource PanelBorderStyle}">
                 <Grid ColumnSpacing="16">
