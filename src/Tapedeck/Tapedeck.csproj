@@ -18,7 +18,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>preview</LangVersion>
     <ApplicationIcon>Assets\Tapedeck.ico</ApplicationIcon>
-    <Version>0.1.1</Version>
+    <Version>0.1.2</Version>
     <!-- Keep ProductVersion exactly "x.y.z" (no "+commit" suffix) so it matches the release
          version that SignPath's metadata restrictions check. -->
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
