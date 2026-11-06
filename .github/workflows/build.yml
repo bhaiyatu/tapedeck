@@ -3,8 +3,10 @@
 #   - Tapedeck-<version>-x64-portable.zip / -arm64-portable.zip
 #   - SHA256SUMS.txt and a signed build-provenance attestation for every file
 #
-# Code signing (SignPath Foundation) switches on for version tags once these are set in
-# GitHub → Settings → Secrets and variables → Actions:
+# Code signing through SignPath is wired up but off: the SignPath Foundation (free OSS) application
+# was declined in 2026-11 for lack of public visibility; reapply once the project has more
+# adoption. It switches on for version tags once these are set in
+# GitHub → Settings → Secrets and variables → Actions (also update the release notes below):
 #   secret   SIGNPATH_API_TOKEN            (SignPath CI user with submitter rights)
 #   variable SIGNPATH_ORGANIZATION_ID
 #   variable SIGNPATH_PROJECT_SLUG         (default: tapedeck)
@@ -226,5 +228,5 @@ jobs:
             - Compare the file's SHA-256 with `SHA256SUMS.txt`: in PowerShell, run `Get-FileHash .\Tapedeck-…-setup.exe`.
             - Or verify the signed provenance: `gh attestation verify <file> --repo ${{ github.repository }}`
 
-            ## Code signing policy
-            Free code signing provided by [SignPath.io](https://signpath.io), certificate by [SignPath Foundation](https://signpath.org). If a release predates signing, Windows SmartScreen may warn on first run: choose **More info → Run anyway**, and only for files from this page. See the [code signing policy](https://github.com/${{ github.repository }}#code-signing-policy) and [privacy policy](https://github.com/${{ github.repository }}/blob/main/PRIVACY.md).
+            ## Windows SmartScreen
+            Tapedeck isn't code-signed yet, so Windows may say "Windows protected your PC" on first run: choose **More info → Run anyway**, and only for files from this page. PCs with Smart App Control turned on block unsigned apps entirely. See the [privacy policy](https://github.com/${{ github.repository }}/blob/main/PRIVACY.md).

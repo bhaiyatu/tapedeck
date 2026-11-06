@@ -42,7 +42,7 @@ Get the latest **[release](https://github.com/bhaiyatu/tapedeck/releases/latest)
 - **Tapedeck-…-x64-setup.exe** for most PCs, or **-arm64-setup.exe** for Snapdragon / ARM PCs. It installs just for you, with no admin prompt, and adds a Start menu entry. Uninstalling offers to remove your settings and sign-in too.
 - **…-portable.zip** if you'd rather not install: unzip and run `Tapedeck.exe`.
 
-Releases are being moved to signed builds (see the [code signing policy](#code-signing-policy)). If a release isn't signed, Windows SmartScreen may say "Windows protected your PC": choose **More info → Run anyway**, and only for files from the official releases page. Each release lists SHA-256 checksums and carries a GitHub build-provenance attestation, so you can check a file was built from this repository: `gh attestation verify <file> --repo bhaiyatu/tapedeck`.
+Releases aren't code-signed yet, so the first time you run one Windows SmartScreen may say "Windows protected your PC": choose **More info → Run anyway**, and only for files from the official releases page. On PCs with **Smart App Control** turned on, Windows blocks unsigned apps and has no Run anyway option. See [verifying a download](#verifying-a-download) to check a file really came from this repository.
 
 Requires Windows 10 (2004) or later with the WebView2 runtime (built into Windows 11).
 
@@ -101,17 +101,14 @@ Data lives in `%LOCALAPPDATA%\Tapedeck`: `settings.json`, the `WebView2` profile
 - No video mode, equalizer, mini-player or playlist editing yet.
 - Library pages show the first page of results.
 
-## Code signing policy
+## Verifying a download
 
-Free code signing provided by [SignPath.io](https://signpath.io), certificate by [SignPath Foundation](https://signpath.org).
+Every release file is built by this repository's GitHub Actions workflow (`.github/workflows/build.yml`) straight from its source, and nothing is added by hand. To check a file you downloaded:
 
-Only binaries built by this repository's GitHub Actions workflow (`.github/workflows/build.yml`) from its own source are submitted for signing, and every signing request is approved by hand.
+- Compare its SHA-256 with the release's `SHA256SUMS.txt`: in PowerShell, `Get-FileHash .\Tapedeck-…-setup.exe`.
+- Or verify its build-provenance attestation with the GitHub CLI: `gh attestation verify <file> --repo bhaiyatu/tapedeck`.
 
-**Team roles**
-- Committers and reviewers: [bhaiyatu](https://github.com/bhaiyatu)
-- Approvers: [bhaiyatu](https://github.com/bhaiyatu)
-
-**Privacy:** this program will not transfer any information to other networked systems unless specifically requested by the user or the person installing or operating it. Tapedeck connects to YouTube Music / Google to do what you ask (browse, play, sign in), and to LRCLIB only while the Lyrics panel is open (you can turn that off). It has no servers or analytics of its own. Details are in the [privacy policy](PRIVACY.md).
+**Privacy:** Tapedeck connects to YouTube Music / Google to do what you ask (browse, play, sign in), and to LRCLIB only while the Lyrics panel is open (you can turn that off). It has no servers or analytics of its own. Details are in the [privacy policy](PRIVACY.md).
 
 ## License
 
