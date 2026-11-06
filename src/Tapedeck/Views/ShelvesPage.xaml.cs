@@ -27,7 +27,8 @@ public sealed partial class ShelvesPage : Page
     private ShelvesArgs _args = new("FEmusic_home");
     private string? _chipParams;
     private string? _continuation;
-    private bool _loadingMore;
+    // The list (identified by its load's token source) a "load more" is running for, if any.
+    private CancellationTokenSource? _loadingMoreFor;
     private CancellationTokenSource? _cts;
 
     public ShelvesPage()
@@ -138,16 +139,20 @@ public sealed partial class ShelvesPage : Page
 
     private async Task LoadMoreAsync()
     {
-        if (_loadingMore || _continuation is null) return;
-        _loadingMore = true;
-        MoreRing.IsActive = true;
+        var cts = _cts;
+        if (cts is null || _loadingMoreFor == cts || _continuation is null) return;
+        // Capture which list this is for: a chip click or reload can replace it while we wait.
+        var key = CacheKey;
         var token = _continuation;
+        _loadingMoreFor = cts;
+        MoreRing.IsActive = true;
         try
         {
-            var more = await App.Api.ContinueShelvesAsync(token, _cts?.Token ?? default);
+            var more = await App.Api.ContinueShelvesAsync(token, cts.Token);
+            if (cts != _cts || cts.IsCancellationRequested) return;
             foreach (var s in more.Shelves) _shelves.Add(s);
             _continuation = more.Continuation;
-            if (Cache.TryGetValue(CacheKey, out var cached))
+            if (Cache.TryGetValue(key, out var cached))
             {
                 cached.Shelves.AddRange(more.Shelves);
                 cached.Continuation = more.Continuation;
@@ -155,12 +160,12 @@ public sealed partial class ShelvesPage : Page
         }
         catch (Exception)
         {
-            _continuation = null;
+            if (cts == _cts) _continuation = null;
         }
         finally
         {
-            _loadingMore = false;
-            MoreRing.IsActive = false;
+            if (_loadingMoreFor == cts) _loadingMoreFor = null;
+            if (cts == _cts) MoreRing.IsActive = false;
         }
     }
 

@@ -60,6 +60,8 @@ public sealed partial class MainWindow : Window
         Bar.PanelRequested += (_, panel) => ShowPanel(panel);
         App.Player.PropertyChanged += OnPlayerChanged;
         App.Auth.PropertyChanged += (_, _) => UpdateAccountCard();
+        App.Auth.SessionExpired += (_, _) =>
+            ShowToast("Your Google sign-in has expired. Sign in again to see your library.", InfoBarSeverity.Warning);
         App.Bridge.BlockedByInterstitial += (_, uri) =>
         {
             _interstitial = uri;

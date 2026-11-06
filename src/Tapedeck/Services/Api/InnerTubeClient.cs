@@ -74,6 +74,9 @@ public sealed class InnerTubeClient
     /// <summary>Returns the Cookie header for music.youtube.com, or null when signed out.</summary>
     public Func<Task<string?>>? CookieProvider { get; set; }
 
+    /// <summary>Raised (on a background thread) when a request that carried the session got 401/403.</summary>
+    public event Action? SessionRejected;
+
     // ───────────────────────── Transport ─────────────────────────
 
     private JsonObject Context() => new()
@@ -112,8 +115,10 @@ public sealed class InnerTubeClient
 
         // The session is only ever attached to requests for the fixed music.youtube.com origin over HTTPS.
         var cookies = CookieProvider is null ? null : await CookieProvider().ConfigureAwait(false);
+        var withSession = false;
         if (!string.IsNullOrEmpty(cookies) && req.RequestUri is { Scheme: "https", Host: "music.youtube.com" } && Validate.IsHeaderSafe(cookies))
         {
+            withSession = true;
             req.Headers.TryAddWithoutValidation("Cookie", cookies);
             if (BuildAuthorization(cookies) is { } auth)
             {
@@ -126,7 +131,11 @@ public sealed class InnerTubeClient
         if ((int)res.StatusCode is >= 300 and < 400)
             throw new HttpRequestException($"YouTube Music redirected the request ({(int)res.StatusCode}); not following it.");
         if (res.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
+        {
+            if (!withSession) throw new HttpRequestException($"YouTube Music refused the request ({(int)res.StatusCode}).");
+            SessionRejected?.Invoke();
             throw new AuthExpiredException($"YouTube Music rejected the request ({(int)res.StatusCode}). Try signing in again.");
+        }
         var text = await res.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
         if (!res.IsSuccessStatusCode)
             throw new HttpRequestException($"YouTube Music returned {(int)res.StatusCode} for {endpoint}.");

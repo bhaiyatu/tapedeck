@@ -29,6 +29,7 @@ public sealed partial class LyricsService
         if (track.VideoId is { } id && _cache.TryGetValue(id, out var cached)) return cached;
 
         Lyrics? result = null;
+        var failed = false;
         if (App.Settings.Current.UseLrclib)
         {
             try
@@ -38,6 +39,7 @@ public sealed partial class LyricsService
             catch (Exception) when (!ct.IsCancellationRequested)
             {
                 // Fall through to YouTube Music lyrics.
+                failed = true;
             }
         }
 
@@ -49,10 +51,12 @@ public sealed partial class LyricsService
             }
             catch (Exception) when (!ct.IsCancellationRequested)
             {
+                failed = true;
             }
         }
 
-        if (track.VideoId is not null && !ct.IsCancellationRequested) _cache[track.VideoId] = result;
+        // Remember what was found, or a definite "none"; a lookup that failed (e.g. offline) is retried next time.
+        if (track.VideoId is not null && !ct.IsCancellationRequested && (result is not null || !failed)) _cache[track.VideoId] = result;
         return result;
     }
 

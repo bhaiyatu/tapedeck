@@ -43,6 +43,7 @@ public partial class App : Application
         Bridge = new PlayerBridge();
         Auth = new AuthService(Dispatcher, Bridge);
         Api.CookieProvider = Auth.GetCookieHeaderAsync;
+        Api.SessionRejected += Auth.HandleSessionRejected;
         Player = new PlayerService(Bridge, Api, Settings);
         Lyrics = new LyricsService(Api);
         Discord = new DiscordPresenceService(Player, Settings, Dispatcher);

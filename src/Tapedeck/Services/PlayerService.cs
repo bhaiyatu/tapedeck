@@ -24,6 +24,9 @@ public sealed partial class PlayerService : ObservableObject
     private bool _suppressQueueSync;
     private int _skipOnErrorGeneration;
     private CancellationTokenSource? _trackInfoCts;
+    // Bumped by every request to play something new. A slower, older request that finishes later
+    // then gives way instead of replacing what the user picked since.
+    private int _playRequest;
 
     public PlayerService(PlayerBridge bridge, InnerTubeClient api, SettingsService settings)
     {
@@ -127,6 +130,7 @@ public sealed partial class PlayerService : ObservableObject
     public void PlayList(IEnumerable<MusicItem> items, int startIndex = 0, string? playlistId = null, string? continuation = null,
         bool shuffle = false, string? sourceId = null)
     {
+        _playRequest++;
         // Map the start index onto the filtered (playable-only) list.
         var source = items.ToList();
         var startItem = startIndex >= 0 && startIndex < source.Count ? source[startIndex] : null;
@@ -183,19 +187,22 @@ public sealed partial class PlayerService : ObservableObject
 
     public async Task PlayCollectionAsync(string browseId, bool shuffle = false)
     {
+        var request = ++_playRequest;
         try
         {
             var details = await _api.GetCollectionAsync(browseId);
+            if (request != _playRequest) return; // something else was played meanwhile
             PlayList(details.Tracks, 0, details.PlaylistId, details.Continuation, shuffle);
         }
         catch (Exception ex)
         {
-            StatusMessage = ex.Message;
+            if (request == _playRequest) StatusMessage = ex.Message;
         }
     }
 
     private async Task PlayFromQueueApiAsync(string? videoId, string? playlistId, string? @params, int? index, MusicItem? seed)
     {
+        var request = ++_playRequest;
         // Start the seed straight away so the click feels instant; the queue fills in after.
         if (seed?.VideoId is not null)
         {
@@ -206,6 +213,7 @@ public sealed partial class PlayerService : ObservableObject
         try
         {
             var page = await _api.GetQueueAsync(videoId, playlistId, @params, index);
+            if (request != _playRequest) return; // something else was played meanwhile
             if (page.Items.Count == 0)
             {
                 if (seed is null) StatusMessage = "Nothing to play here.";
@@ -234,7 +242,7 @@ public sealed partial class PlayerService : ObservableObject
         }
         catch (Exception ex)
         {
-            StatusMessage = ex.Message;
+            if (request == _playRequest) StatusMessage = ex.Message;
         }
     }
 
@@ -644,9 +652,12 @@ public sealed partial class PlayerService : ObservableObject
     private async void OnBridgeError(object? sender, string message)
     {
         StatusMessage = $"Can't play this track: {message}";
+        // Skip the broken track after a moment, but only if it is still the one playing: picking
+        // another song (or the page moving on) in the meantime cancels the skip.
+        var failed = Current;
         var generation = ++_skipOnErrorGeneration;
         await Task.Delay(2500);
-        if (generation == _skipOnErrorGeneration && CurrentIndex + 1 < Queue.Count) Next();
+        if (generation == _skipOnErrorGeneration && failed is not null && ReferenceEquals(Current, failed) && CurrentIndex + 1 < Queue.Count) Next();
     }
 
     // ───────────────────────── Library actions ─────────────────────────
@@ -659,6 +670,7 @@ public sealed partial class PlayerService : ObservableObject
             StatusMessage = "Sign in to like songs.";
             return;
         }
+        var track = Current;
         var wasLiked = IsLiked;
         LikeStatus = wasLiked ? "INDIFFERENT" : "LIKE";
         try
@@ -667,7 +679,8 @@ public sealed partial class PlayerService : ObservableObject
         }
         catch (Exception ex)
         {
-            LikeStatus = wasLiked ? "LIKE" : "INDIFFERENT";
+            // Undo the optimistic change only on the song it was made on.
+            if (ReferenceEquals(Current, track)) LikeStatus = wasLiked ? "LIKE" : "INDIFFERENT";
             StatusMessage = ex.Message;
         }
     }

@@ -147,6 +147,19 @@ public static class SelfTest
                     $"album track 1 plays: {first?.Title}");
             }
 
+            // 6b. A playback error schedules a skip of that track; picking another song yourself before
+            //     it fires must not get skipped instead.
+            if (player.Queue.Count > 3)
+            {
+                await App.Bridge.EvalAsync("window.chrome.webview.postMessage({ type: 'error', code: -1, message: 'self-test error' })");
+                await Task.Delay(300);
+                var picked = player.Queue[2];
+                player.PlayIndex(2);
+                await Task.Delay(4000);
+                Check(player.Current == picked && player.CurrentIndex == 2,
+                    $"an error's pending skip didn't skip the song picked after it (now {player.Current?.Title}, index {player.CurrentIndex})");
+            }
+
             // 7. Lyrics lookup for whatever is playing.
             await WaitFor(() => player.TrackInfoLoaded, 10);
             var lyrics = await App.Lyrics.GetAsync(player.Current!, player.LyricsBrowseId, player.Duration, CancellationToken.None);

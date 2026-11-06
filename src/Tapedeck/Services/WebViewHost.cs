@@ -35,7 +35,12 @@ public static class WebViewHost
         }
     }
 
-    public static Task<CoreWebView2Environment> GetEnvironmentAsync() => _environment ??= CreateAsync();
+    public static Task<CoreWebView2Environment> GetEnvironmentAsync()
+    {
+        // A failed start (e.g. the WebView2 runtime was missing) is tried again next time rather than kept.
+        if (_environment is { IsFaulted: true } or { IsCanceled: true }) _environment = null;
+        return _environment ??= CreateAsync();
+    }
 
     private static async Task<CoreWebView2Environment> CreateAsync()
     {
